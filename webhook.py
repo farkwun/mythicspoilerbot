@@ -1,7 +1,7 @@
 from bottle import route, run, request, response
 import json
 
-import msbot.config
+import msbot.settings
 
 # Constants
 OBJECT = 'object'
@@ -36,7 +36,7 @@ def webhook_verify():
     challenge = request.query[CHALLENGE]
 
     if mode and token:
-        if mode == SUBSCRIBE and token == msbot.config.VERIFY_TOKEN:
+        if mode == SUBSCRIBE and token == msbot.settings.VERIFY_TOKEN:
             print('WEBHOOK_VERIFIED')
             response.status = 200
             return challenge
