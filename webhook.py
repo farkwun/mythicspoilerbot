@@ -1,4 +1,4 @@
-from bottle import route, run, request, response
+from bottle import route, run, request, response, default_app
 import json
 
 import msbot.settings
@@ -14,7 +14,6 @@ MODE = 'hub.mode'
 TOKEN = 'hub.verify_token'
 CHALLENGE = 'hub.challenge'
 SUBSCRIBE = 'subscribe'
-
 
 @route('/webhook', method='POST')
 def webhook_event():
@@ -43,5 +42,7 @@ def webhook_verify():
         else:
             response.status = 403
 
-
-run(host='localhost', port=8080)
+if __name__ == '__main__':
+    run(host='0.0.0.0', port=8080)
+else:
+    app = application = default_app()
