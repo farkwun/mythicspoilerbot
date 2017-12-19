@@ -15,6 +15,16 @@ TOKEN = 'hub.verify_token'
 CHALLENGE = 'hub.challenge'
 SUBSCRIBE = 'subscribe'
 
+# Helpers
+def handle_message(sender_psid, received_message):
+    pass
+
+def handle_postback(sender_psid, received_postback):
+    pass
+
+def call_send_API(sender_psid, response):
+    pass
+
 @route('/webhook', method='POST')
 def webhook_event():
     req = json.load(request.body)
