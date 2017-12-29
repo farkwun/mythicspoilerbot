@@ -1,6 +1,6 @@
 from bottle import route, run, request, response, default_app
 import json
-
+import msbot.mslib
 import msbot.settings
 
 # Constants
@@ -51,6 +51,7 @@ def webhook_verify():
             return challenge
         else:
             response.status = 403
+
 
 if __name__ == '__main__':
     run(host='0.0.0.0', port=8080)
