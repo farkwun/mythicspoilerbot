@@ -1,48 +1,38 @@
 import requests
 import json
+import settings
 from spoiler import Spoiler
 
-
+url_base = 'http://mythicspoilerapi.dungeonmastering.net/'
 
 def getCardsBySet(setname):
-       	"""
-       	:type setname: String
-       	:rtype: List[Spoiler]
-       	"""
-	url = 'http://mythicspoilerapi.dungeonmastering.net/APIv2/cards/by/set'
-	payload = {'key': 'ZWdneml0QGdtYWlsLmNvbQ==', 'param': setname}
+	"""
+	:type setname: String
+	:rtype: List[Spoiler]
+	"""
+	url = url_base + 'APIv2/cards/by/set'
+	payload = {'key': settings.API_KEY, 'param': setname}
 	r = requests.get(url, params = payload)
 	cards = json.loads(r.text[1:len(r.text)-1])['item']
-       	output = ''
-       	spoiler_list = []
-       	for card in cards:
-               	spoiler_list.append(Spoiler(card))
-      	return spoiler_list
+	output = ''
+	spoiler_list = []
+	for card in cards:
+		spoiler_list.append(Spoiler(card))
+	return spoiler_list
 
 def getLatestSpoilers():
 	"""
-        :rtype: List[string]
-        """
-	url = 'http://mythicspoilerapi.dungeonmastering.net/APIv2/cards/by/spoils'
-	payload = {'key': 'ZWdneml0QGdtYWlsLmNvbQ=='}
+	:rtype: List[string]
+	"""
+	url = url_base + 'APIv2/cards/by/spoils'
+	payload = {'key': settings.API_KEY}
 	r = requests.get(url, params = payload)
 	cards = json.loads(r.text[1:len(r.text)-1])['item']
-        output = ''
-        url_list = []
-        for card in cards:
-                url_list.append('http://mythicspoilerapi.dungeonmastering.net/card_images/new_spoils/' + card['cardUrl'])
-        return url_list
+	output = ''
+	url_list = []
+	for card in cards:
+		url_list.append(url_base + 'card_images/new_spoils/' + card['cardUrl'])
+	return url_list
 
-"""
-output = ''
-spoiler_list = getCardsBySet('Innistrad')
-for spoil in spoiler_list:
-	output += spoil.name + ', '
-print(output)
-output = ''
-output_list = []
-url_list = getLatestSpoilers()
-for url in url_list:
-	output += url + ','
-print(output)
-"""
+for url in getLatestSpoilers():
+	print(url)
