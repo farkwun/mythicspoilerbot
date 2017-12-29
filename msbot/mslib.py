@@ -34,5 +34,3 @@ def getLatestSpoilers():
 		url_list.append(url_base + 'card_images/new_spoils/' + card['cardUrl'])
 	return url_list
 
-for url in getLatestSpoilers():
-	print(url)
