@@ -4,6 +4,8 @@ import msbot.mslib
 import requests
 import time
 import msbot.settings
+import sqlite3
+
 
 # Constants
 OBJECT = 'object'
@@ -22,6 +24,9 @@ MODE = 'hub.mode'
 TOKEN = 'hub.verify_token'
 CHALLENGE = 'hub.challenge'
 SUBSCRIBE = 'subscribe'
+
+conn = sqlite3.connect('db/msbot_tables.db')
+c = conn.cursor()
 
 # Helpers
 def send_image(sender_psid, response):
@@ -42,13 +47,32 @@ def send_image(sender_psid, response):
     r = requests.post(fb_url, params=params, json=request_body)
 
 def handle_message(sender_psid, received_message):
-    if received_message[TEXT]:
-        response = {
-            TEXT: "http://mythicspoiler.com/fnm/cards/pendelhaven.jpg" 
-        }
-    while(True):
-        time.sleep(30)
+	images = msbot.mslib.getSpoilersTest(0)
+	response = {TEXT: '0'}
+	send_image(sender_psid, response)
+	for image in images:
+	        c.execute('''
+	                SELECT img FROM spoilers WHERE img = ?
+	                ''', (image,))
+	        if len(c.fetchall()) == 0:
+	                response = {TEXT: image}
+			send_image(sender_psid, response)
+	                c.execute('''
+	                        INSERT INTO spoilers VALUES(0, ?)
+	                        ''', (image,))
+	images = msbot.mslib.getSpoilersTest(1)
+	response = {TEXT: '1'}
         send_image(sender_psid, response)
+	for image in images:
+	        c.execute('''
+	                SELECT img FROM spoilers WHERE img = ?
+	                ''', (image,))
+	        if len(c.fetchall()) == 0:
+	                response = {TEXT: image}
+                        send_image(sender_psid, response)
+			c.execute('''
+	                        INSERT INTO spoilers VALUES(0, ?)
+	                        ''', (image,))
 
 def handle_postback(sender_psid, received_postback):
     pass
