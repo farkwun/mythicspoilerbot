@@ -2,7 +2,7 @@ from bottle import route, run, request, response, default_app
 import json
 import msbot.mslib
 import requests
-
+import time
 import msbot.settings
 
 # Constants
@@ -24,7 +24,7 @@ CHALLENGE = 'hub.challenge'
 SUBSCRIBE = 'subscribe'
 
 # Helpers
-def call_send_API(sender_psid, response):
+def send_image(sender_psid, response):
     request_body = {
         RECIPIENT: {
             ID: sender_psid
@@ -44,10 +44,11 @@ def call_send_API(sender_psid, response):
 def handle_message(sender_psid, received_message):
     if received_message[TEXT]:
         response = {
-            TEXT: "You sent the message '%s'. Now send me an image!" %
-            received_message[TEXT]
+            TEXT: "http://mythicspoiler.com/fnm/cards/pendelhaven.jpg" 
         }
-    call_send_API(sender_psid, response)
+    while(True):
+        time.sleep(30)
+        send_image(sender_psid, response)
 
 def handle_postback(sender_psid, received_postback):
     pass
