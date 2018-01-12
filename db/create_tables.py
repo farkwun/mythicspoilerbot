@@ -5,6 +5,12 @@ def create_new_tables():
 
 	c = conn.cursor()
 	c.execute('''
+		DROP TABLE spoilers
+		''')
+        c.execute('''
+                DROP TABLE users
+                ''')
+	c.execute('''
 		CREATE TABLE spoilers
 		(date varchar(250) NOT NULL, img varchar(250) NOT NULL)
 		''')
