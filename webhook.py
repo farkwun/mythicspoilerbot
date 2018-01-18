@@ -111,10 +111,10 @@ def handle_message(sender_psid, received_message):
 					INSERT INTO users VALUES(?, 0)
 					''', (sender_psid,))
 				conn.commit()	
-				response = {TEXT: 'user entered'}
+				response = {TEXT: 'You are now subscribed. Type "goodbye" at any time to unsubscribe'}
 				send_message(sender_psid, response)
 			else:
-				response = {TEXT: 'user already exists'}
+				response = {TEXT: 'You are already subscribed'}
 				send_message(sender_psid, response)
 		if received_message.lower() == 'goodbye':
 			print(sender_psid)
@@ -122,7 +122,7 @@ def handle_message(sender_psid, received_message):
 				DELETE FROM users WHERE id = ?
 				''', (sender_psid,))
 			conn.commit()
-			response = {TEXT: 'wow fuck you i thought we were friends'}
+			response = {TEXT: 'You have been unsubscribed from MythicSpoilerBot'}
 			send_message(sender_psid, response)
 
 def handle_postback(sender_psid, received_postback):
