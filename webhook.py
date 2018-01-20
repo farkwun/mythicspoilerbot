@@ -102,7 +102,7 @@ def handle_message(sender_psid, received_message):
 		if received_message.lower() == 'poop':
 			response = {TEXT: 'ur a poop'}
 			send_message(sender_psid, response)
-		if received_message.lower() == 'hello':
+		elif received_message.lower() == 'hello':
 			c.execute('''
 				SELECT id FROM users WHERE id = ?
 				''', (sender_psid,))
@@ -111,12 +111,12 @@ def handle_message(sender_psid, received_message):
 					INSERT INTO users VALUES(?, 0)
 					''', (sender_psid,))
 				conn.commit()	
-				response = {TEXT: 'You are now subscribed. Type "goodbye" at any time to unsubscribe'}
+				response = {TEXT: 'You are now subscribed. Say "goodbye" at any time to unsubscribe'}
 				send_message(sender_psid, response)
 			else:
 				response = {TEXT: 'You are already subscribed'}
 				send_message(sender_psid, response)
-		if received_message.lower() == 'goodbye':
+		elif received_message.lower() == 'goodbye':
 			print(sender_psid)
 			c.execute('''
 				DELETE FROM users WHERE id = ?
@@ -124,6 +124,16 @@ def handle_message(sender_psid, received_message):
 			conn.commit()
 			response = {TEXT: 'You have been unsubscribed from MythicSpoilerBot'}
 			send_message(sender_psid, response)
+		else:
+			c.execute('''
+				SELECT id FROM users WHERE id = ?
+				''', (sender_psid,))
+			if len(c.fetchall()) == 0:
+				response = {TEXT: 'Invalid command. Say "hello" at any time to subscribe'}
+				send_message(sender_psid, response)
+			else:
+				response = {TEXT: 'Invalid command. Say "goodbye" at any time to unsubscribe'}
+				send_message(sender_psid, response)
 
 def handle_postback(sender_psid, received_postback):
 	pass
