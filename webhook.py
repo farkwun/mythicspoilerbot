@@ -55,6 +55,7 @@ def send_updates():
 	while (True):
 		time.sleep(600)
 		spoilers = msbot.mslib.getLatestSpoilers()
+		print('spoiler get')
 		tc.execute('''
 			SELECT id FROM users
 			''')
@@ -64,6 +65,7 @@ def send_updates():
 				SELECT img FROM spoilers WHERE img = ?
 				''', (spoiler,))
 			if len(tc.fetchall()) == 0:
+				print(spoiler)
 				spoiler_json = {
 					"message": {
 						"attachment": {
@@ -75,23 +77,29 @@ def send_updates():
 						}
 					}
 				}
-				attach_response = requests.post(FB_API_URL, json = spoiler_json)
-				attach_id = json.loads(attach_response.text)["attachment_id"]
-				response = {
-						"attachment": {
-							"type": "image",
-							"payload": {
-								"attachment_id": attach_id
-							}
+				try:
+					attach_response = requests.post(FB_API_URL, json = spoiler_json)
+				except ConnectionError:
+					print('FB Connection Error')
+				else:
+					attach_json = json.loads(attach_response.text)
+					if 'attachment_id' in attach_json:
+						attach_id = attach_json["attachment_id"]
+						response = {
+								"attachment": {
+									"type": "image",
+									"payload": {
+										"attachment_id": attach_id
+									}
+								}
 						}
-				}
-				for user in current_users:
-					send_message(user[0], response)
-				tc.execute('''
-					INSERT INTO spoilers VALUES(0, ?)
-					''', (spoiler,))
-				t_conn.commit()
-
+						for user in current_users:
+							send_message(user[0], response)
+					tc.execute('''
+						INSERT INTO spoilers VALUES(0, ?)
+						''', (spoiler,))
+					t_conn.commit()
+	
 #Handle messages received from user
 def handle_message(sender_psid, received_message):
 	conn = sqlite3.connect('db/msbot_tables.db')
@@ -149,7 +157,10 @@ def webhook_event():
 			sender_psid = event[SENDER][ID]
 
 			if event[MESSAGE]:
-				handle_message(sender_psid, event[MESSAGE][TEXT])
+				try:
+					handle_message(sender_psid, event[MESSAGE][TEXT])
+				except KeyError:
+					print('Non-text message received')
 			elif event[POSTBACK]:
 				handle_postback(sender_psid, event[POSTBACK])
 		response.status = 200
