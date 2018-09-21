@@ -60,45 +60,45 @@ def send_updates():
 			SELECT id FROM users
 			''')
 		current_users = tc.fetchall()
-		for spoiler in spoilers:
-			tc.execute('''
-				SELECT img FROM spoilers WHERE img = ?
-				''', (spoiler,))
-			if len(tc.fetchall()) == 0:
-				print(spoiler)
-				spoiler_json = {
-					"message": {
-						"attachment": {
-							"type": "image",
-							"payload": {
-								"is_reusable": True,
-								"url": spoiler
-							}
-						}
-					}
-				}
-				try:
-					attach_response = requests.post(FB_API_URL, json = spoiler_json)
-				except ConnectionError:
-					print('FB Connection Error')
-				else:
-					attach_json = json.loads(attach_response.text)
-					if 'attachment_id' in attach_json:
-						attach_id = attach_json["attachment_id"]
-						response = {
-								"attachment": {
-									"type": "image",
-									"payload": {
-										"attachment_id": attach_id
-									}
-								}
-						}
-						for user in current_users:
-							send_message(user[0], response)
-					tc.execute('''
-						INSERT INTO spoilers VALUES(0, ?)
-						''', (spoiler,))
-					t_conn.commit()
+                for user in current_users:
+                    for spoiler in spoilers:
+                            tc.execute('''
+                                    SELECT img FROM spoilers WHERE img = ?
+                                    ''', (spoiler,))
+                            if len(tc.fetchall()) == 0:
+                                    print(spoiler)
+                                    spoiler_json = {
+                                            "message": {
+                                                    "attachment": {
+                                                            "type": "image",
+                                                            "payload": {
+                                                                    "is_reusable": True,
+                                                                    "url": spoiler
+                                                            }
+                                                    }
+                                            }
+                                    }
+                                    try:
+                                            attach_response = requests.post(FB_API_URL, json = spoiler_json)
+                                    except ConnectionError:
+                                            print('FB Connection Error')
+                                    else:
+                                            attach_json = json.loads(attach_response.text)
+                                            if 'attachment_id' in attach_json:
+                                                    attach_id = attach_json["attachment_id"]
+                                                    response = {
+                                                                    "attachment": {
+                                                                            "type": "image",
+                                                                            "payload": {
+                                                                                    "attachment_id": attach_id
+                                                                            }
+                                                                    }
+                                                    }
+                                                    send_message(user[0], response)
+                                            tc.execute('''
+                                                    INSERT INTO spoilers VALUES(0, ?)
+                                                    ''', (spoiler,))
+                                            t_conn.commit()
 	
 #Handle messages received from user
 def handle_message(sender_psid, received_message):
