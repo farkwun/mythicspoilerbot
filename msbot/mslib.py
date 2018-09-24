@@ -1,7 +1,7 @@
 import requests
 import json
-import settings
-from spoiler import Spoiler
+import msbot.settings
+from msbot.spoiler import Spoiler
 import sqlite3
 
 url_base = 'http://mythicspoilerapi.dungeonmastering.net/'
