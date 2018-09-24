@@ -32,28 +32,26 @@ class TestWebhook(unittest.TestCase):
     def test_send_message(self):
         mock_send_psid = 123456
         mock_message = 'Hello'
+        mock_request_body = {
+            'json': {
+                webhook.RECIPIENT: {
+                    webhook.ID: mock_send_psid
+                },
+                webhook.MESSAGE: mock_message
+            },
+            'params': {
+                webhook.ACCESS_TOKEN: TEST_ACCESS_TOKEN,
+                webhook.RECIPIENT: mock_send_psid
+            }
+        }
+
         webhook.send_message(mock_send_psid, mock_message)
 
         self.requests_mock.post.assert_called_once()
 
-        # Test request body
         _, request_body = self.requests_mock.post.call_args
-        self.assertEqual(
-            request_body['json'][webhook.RECIPIENT][webhook.ID],
-            mock_send_psid
-        )
-        self.assertEqual(
-            request_body['json'][webhook.MESSAGE],
-            mock_message
-        )
-        self.assertEqual(
-            request_body['params'][webhook.ACCESS_TOKEN],
-            TEST_ACCESS_TOKEN
-        )
-        self.assertEqual(
-            request_body['params'][webhook.RECIPIENT],
-            mock_send_psid
-        )
+
+        self.assertDictEqual(request_body, mock_request_body)
 
     def test_webhook_event_text_message_received(self):
         with boddle(
