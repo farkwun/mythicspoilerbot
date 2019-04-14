@@ -149,7 +149,7 @@ def handle_postback(sender_psid, received_postback):
 @route('/webhook', method='POST')
 def webhook_event():
     print('event received')
-    req = json.load(request.body)
+    req = json.loads(request.body.getvalue().decode('utf-8'))
 
     if req[OBJECT] == PAGE_OBJECT:
         for entry in req[ENTRY]:
