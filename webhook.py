@@ -63,24 +63,27 @@ def send_spoiler_to(user_id, attach_id):
     }
     send_message(user_id, response)
 
-#send updates from MythicSpoiler every 10 minutes
 def send_updates():
     database = msbot.msdb.MSDatabase(db_file)
+    spoilers = [
+        s for s in msbot.mslib.getLatestSpoilers() if not
+        database.spoiler_exists(s)
+    ]
+    attach_dict = get_attach_dict_for(spoilers)
+    current_users = database.get_all_user_ids()
+
+    for (user_id,) in current_users:
+        for spoiler in spoilers:
+            send_spoiler_to(user_id, attach_dict[spoiler])
+
+    for spoiler, attach_id in attach_dict.items():
+        database.add_spoiler(spoiler)
+
+#send updates from MythicSpoiler every 10 minutes
+def update():
     while True:
         time.sleep(600)
-        spoilers = [
-            s for s in msbot.mslib.getLatestSpoilers() if not
-            database.spoiler_exists(s)
-        ]
-        attach_dict = get_attach_dict_for(spoilers)
-        current_users = database.get_all_user_ids()
-
-        for (user_id,) in current_users:
-            for spoiler in spoilers:
-                send_spoiler_to(user_id, attach_dict[spoiler])
-
-        for spoiler, attach_id in attach_dict.items():
-            database.add_spoiler(spoiler)
+        send_updates()
 
 #Handle messages received from user
 def handle_message(sender_psid, received_message):
@@ -157,6 +160,6 @@ if __name__ == '__main__':
 else:
     app = application = default_app()
 
-update_thread = Thread(target = send_updates)
+update_thread = Thread(target = update)
 update_thread.setDaemon(True)
 update_thread.start()
