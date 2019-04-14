@@ -1,4 +1,4 @@
-import settings
+import msbot.settings
 
 OBJECT = 'object'
 PAGE_OBJECT = 'page'
@@ -11,7 +11,7 @@ POSTBACK = 'postback'
 TEXT = 'text'
 RECIPIENT = 'recipient'
 ACCESS_TOKEN = 'access_token'
-FB_API_URL = 'https://graph.facebook.com/v2.6/me/message_attachments?access_token=' + settings.PAGE_ACCESS_TOKEN
+FB_API_URL = 'https://graph.facebook.com/v2.6/me/message_attachments?access_token=' + msbot.settings.PAGE_ACCESS_TOKEN
 FB_MESSAGE_URL = 'https://graph.facebook.com/v2.11/me/messages'
 
 MODE = 'hub.mode'

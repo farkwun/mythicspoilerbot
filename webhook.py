@@ -134,7 +134,7 @@ def webhook_verify():
     challenge = request.query[msbot.constants.CHALLENGE]
 
     if mode and token:
-        if mode == SUBSCRIBE and token == msbot.settings.VERIFY_TOKEN:
+        if mode == msbot.constants.SUBSCRIBE and token == msbot.settings.VERIFY_TOKEN:
             print('WEBHOOK_VERIFIED')
             response.status = 200
             return challenge

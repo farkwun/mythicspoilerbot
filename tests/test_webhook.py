@@ -7,6 +7,8 @@ from boddle import boddle
 
 import webhook
 
+import msbot.constants
+
 TEST_ACCESS_TOKEN = 'TEST_ACCESS_TOKEN'
 TEST_VERIFY_TOKEN = 'TEST_VERIFY_TOKEN'
 TEST_API_KEY = 'TEST_API_KEY'
@@ -34,14 +36,14 @@ class TestWebhook(unittest.TestCase):
         mock_message = 'Hello'
         mock_request_body = {
             'json': {
-                webhook.RECIPIENT: {
-                    webhook.ID: mock_send_psid
+                msbot.constants.RECIPIENT: {
+                    msbot.constants.ID: mock_send_psid
                 },
-                webhook.MESSAGE: mock_message
+                msbot.constants.MESSAGE: mock_message
             },
             'params': {
-                webhook.ACCESS_TOKEN: TEST_ACCESS_TOKEN,
-                webhook.RECIPIENT: mock_send_psid
+                msbot.constants.ACCESS_TOKEN: TEST_ACCESS_TOKEN,
+                msbot.constants.RECIPIENT: mock_send_psid
             }
         }
 
@@ -57,16 +59,16 @@ class TestWebhook(unittest.TestCase):
         with boddle(
             body=json.dumps(
                 {
-                    webhook.OBJECT: webhook.PAGE_OBJECT,
-                    webhook.ENTRY: [
+                    msbot.constants.OBJECT: msbot.constants.PAGE_OBJECT,
+                    msbot.constants.ENTRY: [
                         {
-                            webhook.MESSAGING: [
+                            msbot.constants.MESSAGING: [
                                 {
-                                    webhook.MESSAGE: {
-                                        webhook.TEXT: 'Hello!'
+                                    msbot.constants.MESSAGE: {
+                                        msbot.constants.TEXT: 'Hello!'
                                     },
-                                    webhook.SENDER: {
-                                        webhook.ID: 123456
+                                    msbot.constants.SENDER: {
+                                        msbot.constants.ID: 123456
                                     }
                                 }
                             ],
@@ -82,16 +84,16 @@ class TestWebhook(unittest.TestCase):
         with boddle(
             body=json.dumps(
                 {
-                    webhook.OBJECT: webhook.PAGE_OBJECT,
-                    webhook.ENTRY: [
+                    msbot.constants.OBJECT: msbot.constants.PAGE_OBJECT,
+                    msbot.constants.ENTRY: [
                         {
-                            webhook.MESSAGING: [
+                            msbot.constants.MESSAGING: [
                                 {
-                                    webhook.MESSAGE: {
+                                    msbot.constants.MESSAGE: {
                                         'foo': None
                                     },
-                                    webhook.SENDER: {
-                                        webhook.ID: 123456
+                                    msbot.constants.SENDER: {
+                                        msbot.constants.ID: 123456
                                     }
                                 }
                             ],
@@ -107,7 +109,7 @@ class TestWebhook(unittest.TestCase):
         with boddle(
             body=json.dumps(
                 {
-                    webhook.OBJECT: None,
+                    msbot.constants.OBJECT: None,
                 }
             )
         ):
@@ -117,9 +119,9 @@ class TestWebhook(unittest.TestCase):
     def test_webhook_verify_success(self):
         with boddle(
             query={
-                webhook.MODE: webhook.SUBSCRIBE,
-                webhook.TOKEN: TEST_VERIFY_TOKEN,
-                webhook.CHALLENGE: 'TEST_CHALLENGE'
+                msbot.constants.MODE: msbot.constants.SUBSCRIBE,
+                msbot.constants.TOKEN: TEST_VERIFY_TOKEN,
+                msbot.constants.CHALLENGE: 'TEST_CHALLENGE'
             }
         ):
             self.assertEqual(webhook.webhook_verify(), 'TEST_CHALLENGE')
@@ -128,9 +130,9 @@ class TestWebhook(unittest.TestCase):
     def test_webhook_verify_bad_token(self):
         with boddle(
             query={
-                webhook.MODE: webhook.SUBSCRIBE,
-                webhook.TOKEN: 'BAD_TOKEN',
-                webhook.CHALLENGE: 'TEST_CHALLENGE'
+                msbot.constants.MODE: msbot.constants.SUBSCRIBE,
+                msbot.constants.TOKEN: 'BAD_TOKEN',
+                msbot.constants.CHALLENGE: 'TEST_CHALLENGE'
             }
         ):
             webhook.webhook_verify()
@@ -139,9 +141,9 @@ class TestWebhook(unittest.TestCase):
     def test_webhook_verify_bad_mode(self):
         with boddle(
             query={
-                webhook.MODE: 'BAD_MODE',
-                webhook.TOKEN: TEST_VERIFY_TOKEN,
-                webhook.CHALLENGE: 'TEST_CHALLENGE'
+                msbot.constants.MODE: 'BAD_MODE',
+                msbot.constants.TOKEN: TEST_VERIFY_TOKEN,
+                msbot.constants.CHALLENGE: 'TEST_CHALLENGE'
             }
         ):
             webhook.webhook_verify()
@@ -150,9 +152,9 @@ class TestWebhook(unittest.TestCase):
     def test_webhook_verify_no_mode(self):
         with boddle(
             query={
-                webhook.MODE: None,
-                webhook.TOKEN: TEST_VERIFY_TOKEN,
-                webhook.CHALLENGE: 'TEST_CHALLENGE'
+                msbot.constants.MODE: None,
+                msbot.constants.TOKEN: TEST_VERIFY_TOKEN,
+                msbot.constants.CHALLENGE: 'TEST_CHALLENGE'
             }
         ):
             self.assertEqual(webhook.webhook_verify(), None)
@@ -160,9 +162,9 @@ class TestWebhook(unittest.TestCase):
     def test_webhook_verify_no_token(self):
         with boddle(
             query={
-                webhook.MODE: webhook.SUBSCRIBE,
-                webhook.TOKEN: None,
-                webhook.CHALLENGE: 'TEST_CHALLENGE'
+                msbot.constants.MODE: msbot.constants.SUBSCRIBE,
+                msbot.constants.TOKEN: None,
+                msbot.constants.CHALLENGE: 'TEST_CHALLENGE'
             }
         ):
             self.assertEqual(webhook.webhook_verify(), None)
