@@ -39,7 +39,7 @@ def send_updates():
         current_users = database.get_all_user_ids()
         for user in current_users:
             for spoiler in spoilers:
-                if database.spoiler_exists(spoiler):
+                if not database.spoiler_exists(spoiler):
                     print(spoiler)
                     spoiler_json = {
                         "message": {
