@@ -28,48 +28,59 @@ def send_message(sender_psid, response):
 
     r = requests.post(msbot.constants.FB_MESSAGE_URL, params=params, json=request_body)
 
+
+def get_attach_id_for(image_url):
+    print('Getting attach id for ', image_url)
+    body = {
+        "message": {
+            "attachment": {
+                "type": "image",
+                "payload": {
+                    "is_reusable": True,
+                    "url": image_url
+                }
+            }
+        }
+    }
+    try:
+        attach_response = requests.post(msbot.constants.FB_API_URL, json=body)
+    except ConnectionError:
+        print('FB Connection Error')
+    else:
+        return json.loads(attach_response.text)['attachment_id']
+
+def get_attach_dict_for(images):
+    return { image_url: get_attach_id_for(image_url) for image_url in images }
+
+def send_spoiler_to(user_id, attach_id):
+    response = {
+        "attachment": {
+            "type": "image",
+            "payload": {
+                "attachment_id": attach_id
+            }
+        }
+    }
+    send_message(user_id, response)
+
 #send updates from MythicSpoiler every 10 minutes
 def send_updates():
     database = msbot.msdb.MSDatabase(db_file)
-    print('thread')
-    while (True):
+    while True:
         time.sleep(600)
-        spoilers = msbot.mslib.getLatestSpoilers()
-        print('spoiler get')
+        spoilers = [
+            s for s in msbot.mslib.getLatestSpoilers() if not
+            database.spoiler_exists(s)
+        ]
+        attach_dict = get_attach_dict_for(spoilers)
         current_users = database.get_all_user_ids()
-        for user in current_users:
+
+        for (user_id,) in current_users:
             for spoiler in spoilers:
-                if not database.spoiler_exists(spoiler):
-                    print(spoiler)
-                    spoiler_json = {
-                        "message": {
-                            "attachment": {
-                                "type": "image",
-                                "payload": {
-                                    "is_reusable": True,
-                                    "url": spoiler
-                                }
-                            }
-                        }
-                    }
-                    try:
-                        attach_response = requests.post(msbot.constants.FB_API_URL, json = spoiler_json)
-                    except ConnectionError:
-                        print('FB Connection Error')
-                    else:
-                        attach_json = json.loads(attach_response.text)
-                        if 'attachment_id' in attach_json:
-                            attach_id = attach_json["attachment_id"]
-                            response = {
-                                "attachment": {
-                                    "type": "image",
-                                    "payload": {
-                                        "attachment_id": attach_id
-                                    }
-                                }
-                            }
-                            send_message(user[0], response)
-                            database.add_spoiler(spoiler)
+                send_spoiler_to(user_id, attach_dict[spoiler])
+
+        for spoiler, attach_id in attach_dict.items():
+            database.add_spoiler(spoiler)
 
 #Handle messages received from user
 def handle_message(sender_psid, received_message):
