@@ -1,71 +1,45 @@
 from bottle import route, run, request, response, default_app
 import json
+import msbot.constants
 import msbot.mslib
+import msbot.msdb
 import requests
 import time
 import msbot.settings
 import sqlite3
 from threading import Thread
 
-# Constants
-OBJECT = 'object'
-PAGE_OBJECT = 'page'
-ENTRY = 'entry'
-MESSAGING = 'messaging'
-MESSAGE = 'message'
-SENDER = 'sender'
-ID = 'id'
-POSTBACK = 'postback'
-TEXT = 'text'
-RECIPIENT = 'recipient'
-ACCESS_TOKEN = 'access_token'
-FB_API_URL = 'https://graph.facebook.com/v2.6/me/message_attachments?access_token=' + msbot.settings.PAGE_ACCESS_TOKEN
-
-MODE = 'hub.mode'
-TOKEN = 'hub.verify_token'
-CHALLENGE = 'hub.challenge'
-SUBSCRIBE = 'subscribe'
-
-conn = sqlite3.connect('db/msbot_tables.db')
-c = conn.cursor()
+db_file = msbot.settings.DB_LOCATION
 
 # Helpers
 def send_message(sender_psid, response):
     request_body = {
-        RECIPIENT: {
-            ID: sender_psid
+        msbot.constants.RECIPIENT: {
+            msbot.constants.ID: sender_psid
         },
-        MESSAGE: response,
+        msbot.constants.MESSAGE: response,
     }
     print('sending image')
-    fb_url = "https://graph.facebook.com/v2.11/me/messages"
     print(str(request_body))
     params = {
-        ACCESS_TOKEN: msbot.settings.PAGE_ACCESS_TOKEN,
-        RECIPIENT: sender_psid
+        msbot.constants.ACCESS_TOKEN: msbot.settings.PAGE_ACCESS_TOKEN,
+        msbot.constants.RECIPIENT: sender_psid
     }
 
-    r = requests.post(fb_url, params=params, json=request_body)
+    r = requests.post(msbot.constants.FB_MESSAGE_URL, params=params, json=request_body)
 
 #send updates from MythicSpoiler every 10 minutes
 def send_updates():
-    t_conn = sqlite3.connect('db/msbot_tables.db')
-    tc = t_conn.cursor()
+    database = msbot.msdb.MSDatabase(db_file)
     print('thread')
     while (True):
         time.sleep(600)
         spoilers = msbot.mslib.getLatestSpoilers()
         print('spoiler get')
-        tc.execute('''
-        SELECT id FROM users
-        ''')
-        current_users = tc.fetchall()
+        current_users = database.get_all_user_ids()
         for user in current_users:
             for spoiler in spoilers:
-                tc.execute('''
-                SELECT img FROM spoilers WHERE img = ?
-                ''', (spoiler,))
-                if len(tc.fetchall()) == 0:
+                if database.spoiler_exists(spoiler):
                     print(spoiler)
                     spoiler_json = {
                         "message": {
@@ -79,7 +53,7 @@ def send_updates():
                         }
                     }
                     try:
-                        attach_response = requests.post(FB_API_URL, json = spoiler_json)
+                        attach_response = requests.post(msbot.constants.FB_API_URL, json = spoiler_json)
                     except ConnectionError:
                         print('FB Connection Error')
                     else:
@@ -95,53 +69,36 @@ def send_updates():
                                 }
                             }
                             send_message(user[0], response)
-                            tc.execute('''
-                            INSERT INTO spoilers VALUES(0, ?)
-                            ''', (spoiler,))
-                            t_conn.commit()
+                            database.add_spoiler(spoiler)
 
 #Handle messages received from user
 def handle_message(sender_psid, received_message):
-    conn = sqlite3.connect('db/msbot_tables.db')
-    c = conn.cursor()
-    if received_message:
-        print('handling message')
-        print('message:', received_message)
-        if received_message.lower() == 'poop':
-            response = {TEXT: 'ur a poop'}
-            send_message(sender_psid, response)
-        elif received_message.lower() == 'hello':
-            c.execute('''
-            SELECT id FROM users WHERE id = ?
-            ''', (sender_psid,))
-            if len(c.fetchall()) == 0:
-                c.execute('''
-                INSERT INTO users VALUES(?, 0)
-                ''', (sender_psid,))
-                conn.commit()
-                response = {TEXT: 'You are now subscribed. Say "goodbye" at any time to unsubscribe'}
-                send_message(sender_psid, response)
-            else:
-                response = {TEXT: 'You are already subscribed'}
-                send_message(sender_psid, response)
-        elif received_message.lower() == 'goodbye':
-            print(sender_psid)
-            c.execute('''
-            DELETE FROM users WHERE id = ?
-            ''', (sender_psid,))
-            conn.commit()
-            response = {TEXT: 'You have been unsubscribed from MythicSpoilerBot'}
-            send_message(sender_psid, response)
-        else:
-            c.execute('''
-            SELECT id FROM users WHERE id = ?
-            ''', (sender_psid,))
-            if len(c.fetchall()) == 0:
-                response = {TEXT: 'Invalid command. Say "hello" at any time to subscribe'}
-                send_message(sender_psid, response)
-            else:
-                response = {TEXT: 'Invalid command. Say "goodbye" at any time to unsubscribe'}
-                send_message(sender_psid, response)
+    database = msbot.msdb.MSDatabase(db_file)
+    def subscribe(sender_psid):
+        if not database.user_exists(sender_psid):
+            database.add_user(sender_psid)
+            return msbot.constants.RESP_SUBBED
+        return msbot.constants.RESP_ALREADY_SUBBED
+
+    def unsubscribe(sender_psid):
+        if database.user_exists(sender_psid):
+            database.delete_user(sender_psid)
+            return msbot.constants.RESP_UNSUBBED
+        return msbot.constants.RESP_ALREADY_UNSUBBED
+
+    responses = {
+        msbot.constants.HELLO: lambda id: subscribe(id),
+        msbot.constants.GOODBYE: lambda id: unsubscribe(id),
+    }
+    message = received_message.lower()
+    if message in responses:
+        resp = responses[message](sender_psid)
+    else:
+        resp = msbot.constants.RESP_INVALID_UNSUBBED
+        if database.user_exists(sender_psid):
+            resp = msbot.constants.RESP_INVALID_SUBBED
+
+    send_message(sender_psid, {msbot.constants.TEXT: resp})
 
 def handle_postback(sender_psid, received_postback):
     pass
@@ -151,18 +108,19 @@ def webhook_event():
     print('event received')
     req = json.loads(request.body.getvalue().decode('utf-8'))
 
-    if req[OBJECT] == PAGE_OBJECT:
-        for entry in req[ENTRY]:
-            event = entry[MESSAGING][0]
-            sender_psid = event[SENDER][ID]
+    if req[msbot.constants.OBJECT] == msbot.constants.PAGE_OBJECT:
+        for entry in req[msbot.constants.ENTRY]:
+            event = entry[msbot.constants.MESSAGING][0]
+            sender_psid = event[msbot.constants.SENDER][msbot.constants.ID]
 
-            if event[MESSAGE]:
+            if event[msbot.constants.MESSAGE]:
                 try:
-                    handle_message(sender_psid, event[MESSAGE][TEXT])
+                    if sender_psid == u'1611805388885188':
+                        handle_message(sender_psid, event[msbot.constants.MESSAGE][msbot.constants.TEXT])
                 except KeyError:
                     print('Non-text message received')
-            elif event[POSTBACK]:
-                handle_postback(sender_psid, event[POSTBACK])
+            elif event[msbot.constants.POSTBACK]:
+                handle_postback(sender_psid, event[msbot.constants.POSTBACK])
         response.status = 200
         return 'EVENT_RECEIVED'
     else:
@@ -171,9 +129,9 @@ def webhook_event():
 
 @route('/webhook', method='GET')
 def webhook_verify():
-    mode = request.query[MODE]
-    token = request.query[TOKEN]
-    challenge = request.query[CHALLENGE]
+    mode = request.query[msbot.constants.MODE]
+    token = request.query[msbot.constants.TOKEN]
+    challenge = request.query[msbot.constants.CHALLENGE]
 
     if mode and token:
         if mode == SUBSCRIBE and token == msbot.settings.VERIFY_TOKEN:
