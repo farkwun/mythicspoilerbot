@@ -47,7 +47,7 @@ class TestWebhook(unittest.TestCase):
 
         webhook.send_message(mock_send_psid, mock_message)
 
-        self.requests_mock.post.assert_called_once()
+        self.assertEqual(self.requests_mock.post.call_count, 1)
 
         _, request_body = self.requests_mock.post.call_args
 
