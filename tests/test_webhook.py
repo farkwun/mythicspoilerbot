@@ -55,6 +55,77 @@ class TestWebhook(unittest.TestCase):
 
         self.assertDictEqual(request_body, mock_request_body)
 
+    @mock.patch('msbot.msdb.MSDatabase')
+    @mock.patch('webhook.send_message')
+    def test_handle_message_sub_when_unsubbed(self, send_mock, db_mock):
+        db = db_mock.return_value
+        db.user_exists.return_value = False
+        sender_psid = 1234
+
+        webhook.handle_message(sender_psid, msbot.constants.HELLO)
+        send_mock.assert_called_once_with(
+            sender_psid,
+            { msbot.constants.TEXT: msbot.constants.RESP_SUBBED })
+
+    @mock.patch('msbot.msdb.MSDatabase')
+    @mock.patch('webhook.send_message')
+    def test_handle_message_sub_when_subbed(self, send_mock, db_mock):
+        db = db_mock.return_value
+        db.user_exists.return_value = True
+        sender_psid = 1234
+
+        webhook.handle_message(sender_psid, msbot.constants.HELLO)
+        send_mock.assert_called_once_with(
+            sender_psid,
+            { msbot.constants.TEXT: msbot.constants.RESP_ALREADY_SUBBED })
+
+    @mock.patch('msbot.msdb.MSDatabase')
+    @mock.patch('webhook.send_message')
+    def test_handle_message_unsub_when_unsubbed(self, send_mock, db_mock):
+        db = db_mock.return_value
+        db.user_exists.return_value = False
+        sender_psid = 1234
+
+        webhook.handle_message(sender_psid, msbot.constants.GOODBYE)
+        send_mock.assert_called_once_with(
+            sender_psid,
+            { msbot.constants.TEXT: msbot.constants.RESP_ALREADY_UNSUBBED })
+
+    @mock.patch('msbot.msdb.MSDatabase')
+    @mock.patch('webhook.send_message')
+    def test_handle_message_unsub_when_subbed(self, send_mock, db_mock):
+        db = db_mock.return_value
+        db.user_exists.return_value = True
+        sender_psid = 1234
+
+        webhook.handle_message(sender_psid, msbot.constants.GOODBYE)
+        send_mock.assert_called_once_with(
+            sender_psid,
+            { msbot.constants.TEXT: msbot.constants.RESP_UNSUBBED })
+
+    @mock.patch('msbot.msdb.MSDatabase')
+    @mock.patch('webhook.send_message')
+    def test_handle_message_invalid_when_subbed(self, send_mock, db_mock):
+        db = db_mock.return_value
+        db.user_exists.return_value = True
+        sender_psid = 1234
+
+        webhook.handle_message(sender_psid, 'unsupported_message')
+        send_mock.assert_called_once_with(
+            sender_psid,
+            { msbot.constants.TEXT: msbot.constants.RESP_INVALID_SUBBED })
+
+    @mock.patch('msbot.msdb.MSDatabase')
+    @mock.patch('webhook.send_message')
+    def test_handle_message_invalid_when_unsubbed(self, send_mock, db_mock):
+        db = db_mock.return_value
+        db.user_exists.return_value = False
+        sender_psid = 1234
+        webhook.handle_message(sender_psid, 'unsupported_message')
+        send_mock.assert_called_once_with(
+            sender_psid,
+            { msbot.constants.TEXT: msbot.constants.RESP_INVALID_UNSUBBED })
+
     def test_webhook_event_text_message_received(self):
         with boddle(
             body=json.dumps(
