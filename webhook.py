@@ -49,9 +49,6 @@ def get_attach_id_for(image_url):
     else:
         return json.loads(attach_response.text)['attachment_id']
 
-def get_attach_dict_for(images):
-    return { image_url: get_attach_id_for(image_url) for image_url in images }
-
 def send_spoiler_to(user_id, attach_id):
     response = {
         "attachment": {
@@ -64,20 +61,20 @@ def send_spoiler_to(user_id, attach_id):
     send_message(user_id, response)
 
 def send_updates():
-    database = msbot.msdb.MSDatabase(db_file)
+    db = msbot.msdb.MSDatabase(db_file)
     spoilers = [
         s for s in msbot.mslib.getLatestSpoilers() if not
-        database.spoiler_exists(s)
+        db.spoiler_exists(s)
     ]
-    attach_dict = get_attach_dict_for(spoilers)
-    current_users = database.get_all_user_ids()
+    attach_dict = { s: get_attach_id_for(s) for s in spoilers }
+    current_users = db.get_all_user_ids()
 
     for user_id in current_users:
         for spoiler in spoilers:
             send_spoiler_to(user_id, attach_dict[spoiler])
 
     for spoiler, attach_id in attach_dict.items():
-        database.add_spoiler(spoiler)
+        db.add_spoiler(spoiler)
 
 #send updates from MythicSpoiler every 10 minutes
 def update():
@@ -112,7 +109,7 @@ def handle_message(sender_psid, received_message):
         if database.user_exists(sender_psid):
             resp = msbot.constants.RESP_INVALID_SUBBED
 
-    send_message(sender_psid, {msbot.constants.TEXT: resp})
+    send_message(sender_psid, { msbot.constants.TEXT: resp })
 
 def handle_postback(sender_psid, received_postback):
     pass
