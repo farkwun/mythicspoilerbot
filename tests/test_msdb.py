@@ -47,7 +47,7 @@ class TestWebhook(unittest.TestCase):
 
         self.assertEqual(
             mock_user_ids,
-            {e[0] for e in self.test_db.get_all_user_ids()}
+            { e for e in self.test_db.get_all_user_ids() }
         )
 
     def test_spoiler_exists(self):

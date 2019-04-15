@@ -10,5 +10,5 @@ broadcast_users = database.get_all_user_ids()
 
 message = 'Hello World!'
 
-for (user,) in broadcast_users:
+for user_id in broadcast_users:
     webhook.send_message(user, { msbot.constants.TEXT: message })

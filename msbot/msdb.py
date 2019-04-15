@@ -5,7 +5,7 @@ class MSDatabase(Database):
     def get_all_user_ids(self):
         sql = 'SELECT id FROM users'
         self.query(sql)
-        return self.fetchall()
+        return [ user_id for (user_id,) in self.fetchall() ]
 
     def spoiler_exists(self, spoiler):
         sql = 'SELECT img FROM spoilers WHERE img = ?'

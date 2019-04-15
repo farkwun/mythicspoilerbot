@@ -72,7 +72,7 @@ def send_updates():
     attach_dict = get_attach_dict_for(spoilers)
     current_users = database.get_all_user_ids()
 
-    for (user_id,) in current_users:
+    for user_id in current_users:
         for spoiler in spoilers:
             send_spoiler_to(user_id, attach_dict[spoiler])
 
