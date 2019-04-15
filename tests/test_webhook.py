@@ -55,6 +55,76 @@ class TestWebhook(unittest.TestCase):
 
         self.assertDictEqual(request_body, mock_request_body)
 
+    def test_get_attach_id_for(self):
+        test_url = 'www.fake.com'
+        attach_id = 123456
+        response_mock = mock.Mock()
+        response_mock.text = json.dumps({'attachment_id': attach_id})
+
+        self.requests_mock.post.return_value = response_mock
+        self.assertEqual(webhook.get_attach_id_for(test_url), attach_id)
+
+    @mock.patch('webhook.send_message')
+    def test_send_spoiler_to(self, send_mock):
+        user_id = 1234
+        attach_id = 123456
+
+        test_response = {
+            'attachment': {
+                'type': 'image',
+                'payload': {
+                    'attachment_id': attach_id
+                }
+            }
+        }
+
+        webhook.send_spoiler_to(user_id, attach_id)
+
+        send_mock.assert_called_once_with(user_id, test_response)
+
+    @mock.patch('webhook.get_attach_id_for')
+    @mock.patch('msbot.mslib.getLatestSpoilers')
+    @mock.patch('msbot.msdb.MSDatabase')
+    @mock.patch('webhook.send_spoiler_to')
+    def test_send_updates(self, send_mock, db_mock, spoils_mock, attach_mock):
+        test_spoilers = {
+            '1': {'exists': False, 'attach_id': '123'},
+            '2': {'exists': False, 'attach_id': '456'},
+            '3': {'exists': True, 'attach_id': '789'},
+        }
+
+        test_user_ids = [
+            '11',
+            '22',
+            '33',
+        ]
+
+        def spoiler_exists_return_values(spoiler):
+            return test_spoilers[spoiler]['exists']
+
+        def get_attach_id_for_return_values(spoiler):
+            return test_spoilers[spoiler]['attach_id']
+
+        db = db_mock.return_value
+        db.spoiler_exists.side_effect = spoiler_exists_return_values
+        db.get_all_user_ids.return_value = test_user_ids
+
+        spoils_mock.return_value = [k for k in test_spoilers.keys()]
+
+        attach_mock.side_effect = get_attach_id_for_return_values
+
+        webhook.send_updates()
+
+        calls = [
+            mock.call(
+                user, test_spoilers[spoiler]['attach_id']
+            ) for user in test_user_ids for spoiler in test_spoilers.keys()
+            if not test_spoilers[spoiler]['exists']
+        ]
+
+        send_mock.assert_has_calls(calls)
+        self.assertEqual(send_mock.call_count, len(calls))
+
     @mock.patch('msbot.msdb.MSDatabase')
     @mock.patch('webhook.send_message')
     def test_handle_message_sub_when_unsubbed(self, send_mock, db_mock):
@@ -121,6 +191,7 @@ class TestWebhook(unittest.TestCase):
         db = db_mock.return_value
         db.user_exists.return_value = False
         sender_psid = 1234
+
         webhook.handle_message(sender_psid, 'unsupported_message')
         send_mock.assert_called_once_with(
             sender_psid,
