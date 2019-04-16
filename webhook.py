@@ -49,38 +49,51 @@ def get_attach_id_for(image_url):
     else:
         return json.loads(attach_response.text)['attachment_id']
 
-def send_spoiler_to(user_id, attach_id):
+def send_spoiler_to(user, spoiler):
+    db = msbot.msdb.MSDatabase(db_file)
     response = {
         "attachment": {
             "type": "image",
             "payload": {
-                "attachment_id": attach_id
+                "attachment_id": spoiler.attach_id
             }
         }
     }
-    send_message(user_id, response)
+    send_message(user.user_id, response)
 
-def send_updates():
+def update_spoilers():
     db = msbot.msdb.MSDatabase(db_file)
     spoilers = [
         s for s in msbot.mslib.getLatestSpoilers() if not
         db.spoiler_exists(s)
     ]
     attach_dict = { s: get_attach_id_for(s) for s in spoilers }
-    current_users = db.get_all_user_ids()
-
-    for user_id in current_users:
-        for spoiler in spoilers:
-            send_spoiler_to(user_id, attach_dict[spoiler])
-
     for spoiler, attach_id in attach_dict.items():
         db.add_spoiler(spoiler, attach_id)
+
+def update_users():
+    db = msbot.msdb.MSDatabase(db_file)
+    current_users = db.get_all_unnotified_users()
+    earliest_id = last_spoiler = db.get_latest_spoiler_id()
+
+    for user in current_users:
+        if user.last_spoiled < earliest_id:
+            earliest_id = user.last_spoiled
+
+    spoilers = db.get_spoilers_later_than(earliest_id)
+
+    for user in current_users:
+        for spoiler in spoilers:
+            if spoiler.spoiler_id > user.last_spoiled:
+                send_spoiler_to(user, spoiler)
+        db.update_user(user.user_id, last=last_spoiler)
 
 #send updates from MythicSpoiler every 10 minutes
 def update():
     while True:
         time.sleep(600)
-        send_updates()
+        update_spoilers()
+        update_users()
 
 #Handle messages received from user
 def handle_message(sender_psid, received_message):
