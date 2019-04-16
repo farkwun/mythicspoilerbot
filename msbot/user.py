@@ -8,3 +8,9 @@ class User:
                     user_id=self.user_id,
                     last_spoiled=self.last_spoiled
                 )
+
+    def __eq__(self, other):
+        if not isinstance(other, User):
+            return NotImplemented
+        return (self.user_id == other.user_id and
+                self.last_spoiled == other.last_spoiled)
