@@ -2,6 +2,8 @@ import unittest
 
 from msbot.msdb import MSDatabase
 from msbot.settings import TEST_DB_LOCATION
+from msbot.spoiler import Spoiler
+from msbot.user import User
 
 
 class TestMSDatabase(unittest.TestCase):
@@ -17,6 +19,47 @@ class TestMSDatabase(unittest.TestCase):
         self.test_db = MSDatabase(TEST_DB_LOCATION)
         setup_test_db()
         self.addCleanup(cleanup_test_db)
+
+    def test_get_user_from_id(self):
+        user = User(('Alice', 0))
+        self.test_db.write(
+            ("INSERT INTO users VALUES('{mock_id}', {last_spoiled})")
+            .format(mock_id=user.user_id, last_spoiled=user.last_spoiled)
+        )
+
+        self.assertEqual(user, self.test_db.get_user_from_id('Alice'))
+
+    def test_get_spoiler_from_id(self):
+        spoiler = Spoiler(('spoil1', 'attach1', 1234))
+        self.test_db.write(
+            ("INSERT INTO spoilers VALUES('{mock_img}', '{mock_attach_id}', "
+             "{mock_spoil_id})")
+            .format(
+                mock_img=spoiler.image_url,
+                mock_attach_id=spoiler.attach_id,
+                mock_spoil_id=spoiler.spoiler_id
+            )
+        )
+
+        self.assertEqual(spoiler, self.test_db.get_spoiler_from_id(1234))
+
+    def test_get_all_users(self):
+        mock_users = [
+            User(('Alice', 0)),
+            User(('Bob', 1)),
+            User(('Carol', 2)),
+        ]
+
+        for user in mock_users:
+            self.test_db.write(
+                ("INSERT INTO users VALUES('{mock_id}', {last_spoiled})")
+                .format(mock_id=user.user_id, last_spoiled=user.last_spoiled)
+            )
+
+        self.assertCountEqual(
+            mock_users,
+            self.test_db.get_all_users()
+        )
 
     def test_get_all_user_ids(self):
         mock_user_ids = {
@@ -34,6 +77,51 @@ class TestMSDatabase(unittest.TestCase):
             mock_user_ids,
             { e for e in self.test_db.get_all_user_ids() }
         )
+
+    def test_get_all_unnotified_users(self):
+        alice = User(('Alice', 0))
+        bob = User(('Bob', 1))
+        carol = User(('Carol', 2))
+
+        mock_users = [alice, bob, carol]
+
+        mock_spoilers = [
+            Spoiler(('test1', 'attach1', None)),
+            Spoiler(('test2', 'attach2', None)),
+        ]
+
+        for user in mock_users:
+            self.test_db.write(
+                ("INSERT INTO users VALUES('{mock_id}', {last_spoiled})")
+                .format(mock_id=user.user_id, last_spoiled=user.last_spoiled)
+            )
+
+        for spoiler in mock_spoilers:
+            self.test_db.write(
+                ("INSERT INTO spoilers VALUES('{mock_img}', '{mock_attach_id}', "
+                 "NULL)")
+                .format(
+                    mock_img=spoiler.image_url,
+                    mock_attach_id=spoiler.attach_id)
+            )
+
+        self.assertCountEqual(self.test_db.get_all_unnotified_users(), [alice, bob])
+
+    def test_update_user(self):
+        user = User(('Alice', 0))
+        self.test_db.write(
+            ("INSERT INTO users VALUES('{mock_id}', {last_spoiled})")
+            .format(mock_id=user.user_id, last_spoiled=user.last_spoiled)
+        )
+
+        self.assertEqual(self.test_db.get_user_from_id('Alice'), user)
+
+        self.test_db.update_user('Alice', last=10)
+
+        changed_user = User(('Alice', 10))
+
+        self.assertEqual(self.test_db.get_user_from_id('Alice'), changed_user)
+
 
     def test_spoiler_exists(self):
         test_spoiler = 'test_spoiler_img'
@@ -113,6 +201,46 @@ class TestMSDatabase(unittest.TestCase):
 
         self.assertEqual(self.test_db.get_latest_spoiler_id(), 4)
 
+    def test_get_all_spoilers(self):
+        mock_spoilers = [
+            Spoiler(('test1', 'attach1', 1)),
+            Spoiler(('test2', 'attach2', 2)),
+            Spoiler(('test3', 'attach3', 3)),
+        ]
+        for spoiler in mock_spoilers:
+            self.test_db.write(
+                ("INSERT INTO spoilers VALUES('{mock_img}', '{mock_attach_id}', "
+                 "NULL)")
+                .format(
+                    mock_img=spoiler.image_url,
+                    mock_attach_id=spoiler.attach_id)
+            )
+
+        self.assertCountEqual(self.test_db.get_all_spoilers(), mock_spoilers)
+
+    def test_get_spoilers_later_than(self):
+        spoil1 = Spoiler(('test1', 'attach1', 1))
+        spoil2 = Spoiler(('test2', 'attach2', 2))
+        spoil3 = Spoiler(('test3', 'attach3', 3))
+        mock_spoilers = [spoil1, spoil2, spoil3]
+        for spoiler in mock_spoilers:
+            self.test_db.write(
+                ("INSERT INTO spoilers VALUES('{mock_img}', '{mock_attach_id}', "
+                 "NULL)")
+                .format(
+                    mock_img=spoiler.image_url,
+                    mock_attach_id=spoiler.attach_id)
+            )
+
+        self.assertCountEqual(
+            self.test_db.get_spoilers_later_than(1),
+            [spoil2, spoil3]
+        )
+
+        self.assertCountEqual(
+            self.test_db.get_spoilers_later_than(2),
+            [spoil3]
+        )
 
     def test_create_spoilers_table(self):
         self.test_db.write(
