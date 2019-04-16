@@ -34,8 +34,8 @@ def getLatestSpoilers():
         print('MythicSpoiler Connection Error')
     else:
         try:
-            print(r.text)
             cards = json.loads(r.text[1:len(r.text)-1])['item']
+            print("Received {num_cards} spoilers".format(num_cards=len(cards)))
         except ValueError:
             print('JSON error')
             return []
