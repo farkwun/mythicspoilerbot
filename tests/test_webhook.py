@@ -8,6 +8,8 @@ from boddle import boddle
 import webhook
 
 import msbot.constants
+from msbot.spoiler import Spoiler
+from msbot.user import User
 
 TEST_ACCESS_TOKEN = 'TEST_ACCESS_TOKEN'
 TEST_VERIFY_TOKEN = 'TEST_VERIFY_TOKEN'
@@ -66,38 +68,32 @@ class TestWebhook(unittest.TestCase):
 
     @mock.patch('webhook.send_message')
     def test_send_spoiler_to(self, send_mock):
-        user_id = 1234
-        attach_id = 123456
+        test_user = User((1234, 0))
+        test_spoiler = Spoiler(('test', 123456, None))
 
         test_response = {
             'attachment': {
                 'type': 'image',
                 'payload': {
-                    'attachment_id': attach_id
+                    'attachment_id': test_spoiler.attach_id
                 }
             }
         }
 
-        webhook.send_spoiler_to(user_id, attach_id)
+        webhook.send_spoiler_to(test_user, test_spoiler)
 
-        send_mock.assert_called_once_with(user_id, test_response)
+        send_mock.assert_called_once_with(test_user.user_id, test_response)
+
 
     @mock.patch('webhook.get_attach_id_for')
     @mock.patch('msbot.mslib.getLatestSpoilers')
     @mock.patch('msbot.msdb.MSDatabase')
-    @mock.patch('webhook.send_spoiler_to')
-    def test_send_updates(self, send_mock, db_mock, spoils_mock, attach_mock):
+    def test_update_spoilers(self, db_mock, spoils_mock, attach_mock):
         test_spoilers = {
             '1': {'exists': False, 'attach_id': '123'},
             '2': {'exists': False, 'attach_id': '456'},
             '3': {'exists': True, 'attach_id': '789'},
         }
-
-        test_user_ids = [
-            '11',
-            '22',
-            '33',
-        ]
 
         def spoiler_exists_return_values(spoiler):
             return test_spoilers[spoiler]['exists']
@@ -107,22 +103,48 @@ class TestWebhook(unittest.TestCase):
 
         db = db_mock.return_value
         db.spoiler_exists.side_effect = spoiler_exists_return_values
-        db.get_all_user_ids.return_value = test_user_ids
 
         spoils_mock.return_value = [k for k in test_spoilers.keys()]
 
         attach_mock.side_effect = get_attach_id_for_return_values
 
-        webhook.send_updates()
+        webhook.update_spoilers()
 
         calls = [
-            mock.call(
-                user, test_spoilers[spoiler]['attach_id']
-            ) for user in test_user_ids for spoiler in test_spoilers.keys()
-            if not test_spoilers[spoiler]['exists']
+            mock.call('2', '456'),
+            mock.call('1', '123'),
         ]
 
-        send_mock.assert_has_calls(calls)
+        db.add_spoiler.assert_has_calls(calls, any_order=True)
+        self.assertEqual(db.add_spoiler.call_count, len(calls))
+
+    @mock.patch('msbot.msdb.MSDatabase')
+    @mock.patch('webhook.send_spoiler_to')
+    def test_update_users(self, send_mock, db_mock):
+        db = db_mock.return_value
+
+        alice = User(('Alice', 0))
+        bob = User(('Bob', 1))
+        dan = User(('Dan', 3))
+        db.get_all_unnotified_users.return_value = [alice, bob, dan]
+
+        spoil1 = Spoiler(('test1', '123', 1))
+        spoil2 = Spoiler(('test2', '456', 2))
+        spoil3 = Spoiler(('test3', '789', 3))
+        db.get_spoilers_later_than.return_value = [spoil1, spoil2, spoil3]
+        db.get_latest_spoiler_id.return_value = 5
+
+        calls = [
+            mock.call(alice, spoil1),
+            mock.call(alice, spoil2),
+            mock.call(alice, spoil3),
+            mock.call(bob, spoil2),
+            mock.call(bob, spoil3),
+        ]
+
+        webhook.update_users()
+
+        send_mock.assert_has_calls(calls, any_order=True)
         self.assertEqual(send_mock.call_count, len(calls))
 
     @mock.patch('msbot.msdb.MSDatabase')
