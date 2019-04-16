@@ -37,3 +37,10 @@ class Database(object):
 
     def fetchone(self):
         return self.cursor.fetchone()
+
+    def drop_table(self, table_name):
+        self._cursor.execute(
+            '''
+            DROP TABLE IF EXISTS {table_name}
+            '''.format(table_name=table_name)
+        )

@@ -74,7 +74,7 @@ def send_updates():
             send_spoiler_to(user_id, attach_dict[spoiler])
 
     for spoiler, attach_id in attach_dict.items():
-        db.add_spoiler(spoiler)
+        db.add_spoiler(spoiler, attach_id)
 
 #send updates from MythicSpoiler every 10 minutes
 def update():
