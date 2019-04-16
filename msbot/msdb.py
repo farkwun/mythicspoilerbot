@@ -4,6 +4,16 @@ from msbot.user import User
 
 
 class MSDatabase(Database):
+    def get_user_from_id(self, user_id):
+        sql = "SELECT * FROM users WHERE id = '{user_id}'".format(user_id=user_id)
+        self.query(sql)
+        return User(self.fetchone())
+
+    def get_spoiler_from_id(self, spoiler_id):
+        sql = "SELECT * FROM spoilers WHERE id = '{spoiler_id}'".format(spoiler_id=spoiler_id)
+        self.query(sql)
+        return Spoiler(self.fetchone())
+
     def get_all_user_ids(self):
         sql = 'SELECT id FROM users'
         self.query(sql)
@@ -21,7 +31,7 @@ class MSDatabase(Database):
 
     def update_user(self, user_id, last=None):
         if last != None:
-            sql = "UPDATE users SET last = {last} WHERE id = {user}".format(last=last, user=user_id)
+            sql = "UPDATE users SET last = {last} WHERE id = '{user}'".format(last=last, user=user_id)
             self.write(sql)
 
     def spoiler_exists(self, spoiler):
