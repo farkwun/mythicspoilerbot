@@ -6,3 +6,6 @@ API_KEY = environ.get('MSBOT_API_KEY')
 
 DB_LOCATION = 'db/msbot_tables.db'
 TEST_DB_LOCATION = 'db/test_msbot_tables.db'
+
+DEV_SAFELIST = {
+}

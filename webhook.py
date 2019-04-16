@@ -136,10 +136,11 @@ def webhook_event():
         for entry in req[msbot.constants.ENTRY]:
             event = entry[msbot.constants.MESSAGING][0]
             sender_psid = event[msbot.constants.SENDER][msbot.constants.ID]
+            print("GOT MESSAGE FROM ", sender_psid)
 
             if event[msbot.constants.MESSAGE]:
                 try:
-                    if sender_psid == u'1611805388885188':
+                    if sender_psid in msbot.settings.DEV_SAFELIST:
                         handle_message(sender_psid, event[msbot.constants.MESSAGE][msbot.constants.TEXT])
                 except KeyError:
                     print('Non-text message received')
