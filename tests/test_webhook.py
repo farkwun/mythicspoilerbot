@@ -68,7 +68,7 @@ class TestWebhook(unittest.TestCase):
 
     @mock.patch('webhook.send_message')
     def test_send_spoiler_to(self, send_mock):
-        test_user = User((1234, 0))
+        test_user = User((1234, 0, 0))
         test_spoiler = Spoiler(('test', 123456, None))
 
         test_response = {
@@ -119,27 +119,23 @@ class TestWebhook(unittest.TestCase):
         self.assertEqual(db.add_spoiler.call_count, len(calls))
 
     @mock.patch('msbot.msdb.MSDatabase')
-    @mock.patch('webhook.send_spoiler_to')
+    @mock.patch('webhook.send_text_message')
     def test_update_users(self, send_mock, db_mock):
         db = db_mock.return_value
 
-        alice = User(('Alice', 0))
-        bob = User(('Bob', 1))
-        dan = User(('Dan', 3))
-        db.get_all_unnotified_users.return_value = [alice, bob, dan]
+        alice = User(('Alice', 0, 0))
+        bob = User(('Bob', 4, 1))
+        dan = User(('Dan', 3, 3))
 
-        spoil1 = Spoiler(('test1', '123', 1))
-        spoil2 = Spoiler(('test2', '456', 2))
-        spoil3 = Spoiler(('test3', '789', 3))
-        db.get_spoilers_later_than.return_value = [spoil1, spoil2, spoil3]
+        db.get_all_unnotified_users.return_value = [alice, bob]
+
         db.get_latest_spoiler_id.return_value = 5
 
         calls = [
-            mock.call(alice, spoil1),
-            mock.call(alice, spoil2),
-            mock.call(alice, spoil3),
-            mock.call(bob, spoil2),
-            mock.call(bob, spoil3),
+            mock.call(alice.user_id,
+                      msbot.constants.RESP_UPDATE.format(num_spoilers=5)),
+            mock.call(bob.user_id,
+                      msbot.constants.RESP_UPDATE.format(num_spoilers=4)),
         ]
 
         webhook.update_users()
