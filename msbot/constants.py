@@ -30,8 +30,8 @@ RESP_ALREADY_UNSUBBED = 'You are not subscribed'
 RESP_INVALID_UNSUBBED = 'Invalid command. Say "hello" at any time to subscribe'
 RESP_INVALID_SUBBED = 'Invalid command. Say "goodbye" at any time to unsubscribe'
 RESP_UPDATE = (
-    "New spoilers are out! You have {num_spoilers}. "
-    "Type " + SEND + " to receive your spoilers"
+    "New spoilers are out! You have {num_spoilers} unseen spoiler(s). "
+    "Type '" + SEND + "' to receive your spoilers"
 )
-
 RESP_UPDATE_UPDATED = 'No new spoilers :('
+RESP_UPDATE_COMPLETE = 'You are now up to date'
