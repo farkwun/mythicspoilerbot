@@ -25,17 +25,32 @@ class MSDatabase(Database):
         return [ User(row) for row in self.fetchall() ]
 
     def get_all_unnotified_users(self):
-        sql = "SELECT * FROM users WHERE last < {last_spoiled}".format(last_spoiled=self.get_latest_spoiler_id())
+        sql = "SELECT * FROM users WHERE last_updated < {last_spoiled}".format(last_spoiled=self.get_latest_spoiler_id())
         self.query(sql)
         return [ User(row) for row in self.fetchall() ]
 
-    def update_user(self, user_id, last=None):
-        if last != None:
-            sql = "UPDATE users SET last = {last} WHERE id = '{user}'".format(last=last, user=user_id)
-            self.write(sql)
+    def update_user(self, user_id, last_updated=None, last_spoiled=None):
+        if last_updated == None and last_spoiled == None:
+            return
 
-    def spoiler_exists(self, spoiler):
-        sql = "SELECT img FROM spoilers WHERE img = '{spoiler}'".format(spoiler=spoiler)
+        update_strings = []
+
+        if last_updated != None:
+            update_strings.append('last_updated = {}'.format(last_updated))
+
+        if last_spoiled != None:
+            update_strings.append('last_spoiled = {}'.format(last_spoiled))
+
+        update_string = ','.join(update_strings)
+
+        sql = "UPDATE users SET {update_string} WHERE id = '{user_id}'".format(
+            update_string=update_string,
+            user_id=user_id
+        )
+        self.write(sql)
+
+    def spoiler_exists(self, spoiler_img):
+        sql = "SELECT img FROM spoilers WHERE img = '{spoiler}'".format(spoiler=spoiler_img)
         self.query(sql)
         return len(self.fetchall()) != 0
 
@@ -45,9 +60,11 @@ class MSDatabase(Database):
         return len(self.fetchall()) != 0
 
     def add_user(self, user_id):
-        sql = "INSERT INTO users VALUES('{user_id}', '{last_spoiler}')".format(
+        latest_spoiler = self.get_latest_spoiler_id()
+        sql = "INSERT INTO users VALUES('{user_id}', '{last_updated}', '{last_spoiled}')".format(
             user_id=user_id,
-            last_spoiler=self.get_latest_spoiler_id()
+            last_updated=latest_spoiler,
+            last_spoiled=latest_spoiler,
         )
         self.write(sql)
 
@@ -94,7 +111,10 @@ class MSDatabase(Database):
         sql = '''
         CREATE TABLE IF NOT EXISTS users (
             id varchar(250) NOT NULL,
-            last INTEGER NOT NULL
+            last_updated INTEGER NOT NULL,
+            last_spoiled INTEGER NOT NULL,
+            FOREIGN KEY (last_updated) REFERENCES spoiler(id),
+            FOREIGN KEY (last_spoiled) REFERENCES spoiler(id)
         )
         '''
         self.write(sql)
