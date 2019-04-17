@@ -68,7 +68,7 @@ class TestWebhook(unittest.TestCase):
 
     @mock.patch('webhook.send_message')
     def test_send_spoiler_to(self, send_mock):
-        test_user = User((1234, 0))
+        test_user = User((1234, 0, 0))
         test_spoiler = Spoiler(('test', 123456, None))
 
         test_response = {
@@ -119,27 +119,23 @@ class TestWebhook(unittest.TestCase):
         self.assertEqual(db.add_spoiler.call_count, len(calls))
 
     @mock.patch('msbot.msdb.MSDatabase')
-    @mock.patch('webhook.send_spoiler_to')
+    @mock.patch('webhook.send_text_message')
     def test_update_users(self, send_mock, db_mock):
         db = db_mock.return_value
 
-        alice = User(('Alice', 0))
-        bob = User(('Bob', 1))
-        dan = User(('Dan', 3))
-        db.get_all_unnotified_users.return_value = [alice, bob, dan]
+        alice = User(('Alice', 0, 0))
+        bob = User(('Bob', 4, 1))
+        dan = User(('Dan', 3, 3))
 
-        spoil1 = Spoiler(('test1', '123', 1))
-        spoil2 = Spoiler(('test2', '456', 2))
-        spoil3 = Spoiler(('test3', '789', 3))
-        db.get_spoilers_later_than.return_value = [spoil1, spoil2, spoil3]
+        db.get_all_unnotified_users.return_value = [alice, bob]
+
         db.get_latest_spoiler_id.return_value = 5
 
         calls = [
-            mock.call(alice, spoil1),
-            mock.call(alice, spoil2),
-            mock.call(alice, spoil3),
-            mock.call(bob, spoil2),
-            mock.call(bob, spoil3),
+            mock.call(alice.user_id,
+                      msbot.constants.RESP_UPDATE.format(num_spoilers=5)),
+            mock.call(bob.user_id,
+                      msbot.constants.RESP_UPDATE.format(num_spoilers=4)),
         ]
 
         webhook.update_users()
@@ -182,6 +178,60 @@ class TestWebhook(unittest.TestCase):
         send_mock.assert_called_once_with(
             sender_psid,
             { msbot.constants.TEXT: msbot.constants.RESP_ALREADY_UNSUBBED })
+
+    @mock.patch('msbot.msdb.MSDatabase')
+    @mock.patch('webhook.send_text_message')
+    def test_handle_message_send_when_unsubbed(self, send_mock, db_mock):
+        db = db_mock.return_value
+        db.user_exists.return_value = False
+        sender_psid = 1234
+
+        webhook.handle_message(sender_psid, msbot.constants.SEND)
+        send_mock.assert_called_once_with(
+            sender_psid,
+            msbot.constants.RESP_INVALID_UNSUBBED)
+
+    @mock.patch('msbot.msdb.MSDatabase')
+    @mock.patch('webhook.send_text_message')
+    @mock.patch('webhook.send_spoiler_to')
+    def test_handle_message_send_when_subbed(self, spoil_mock, send_mock, db_mock):
+        alice = User(('Alice', 5, 5))
+        spoiler1 = Spoiler(('spoil1','attach1',None))
+        spoiler2 = Spoiler(('spoil2','attach2',None))
+        spoiler3 = Spoiler(('spoil3','attach3',None))
+        db = db_mock.return_value
+        db.user_exists.return_value = True
+        db.get_user_from_id.return_value = User(('Alice', 5, 5))
+        latest_spoiler = 8
+        db.get_latest_spoiler_id.return_value = latest_spoiler
+        db.get_spoilers_later_than.return_value = []
+        sender_psid = 1234
+
+        # no new spoilers
+        webhook.handle_message(sender_psid, msbot.constants.SEND)
+        send_mock.assert_called_once_with(
+            sender_psid,
+            msbot.constants.RESP_UPDATE_UPDATED)
+
+        # new spoilers
+        send_mock.reset_mock()
+        db.get_spoilers_later_than.return_value = [
+            spoiler1,
+            spoiler2,
+            spoiler3,
+        ]
+        webhook.handle_message(sender_psid, msbot.constants.SEND)
+        calls = [
+            mock.call(alice, spoiler1),
+            mock.call(alice, spoiler2),
+            mock.call(alice, spoiler3),
+        ]
+        spoil_mock.assert_has_calls(calls, any_order=True)
+        self.assertEqual(spoil_mock.call_count, len(calls))
+        send_mock.assert_called_once_with(
+            sender_psid,
+            msbot.constants.RESP_UPDATE_COMPLETE)
+        db.update_user.called_once_with(alice.user_id, latest_spoiler)
 
     @mock.patch('msbot.msdb.MSDatabase')
     @mock.patch('webhook.send_message')

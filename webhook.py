@@ -28,6 +28,8 @@ def send_message(sender_psid, response):
 
     r = requests.post(msbot.constants.FB_MESSAGE_URL, params=params, json=request_body)
 
+def send_text_message(sender_psid, text):
+    send_message(sender_psid, { msbot.constants.TEXT: text})
 
 def get_attach_id_for(image_url):
     print('Getting attach id for ', image_url)
@@ -73,20 +75,14 @@ def update_spoilers():
 
 def update_users():
     db = msbot.msdb.MSDatabase(db_file)
-    current_users = db.get_all_unnotified_users()
-    earliest_id = last_spoiler = db.get_latest_spoiler_id()
+    unnotified_users = db.get_all_unnotified_users()
+    last_spoiler = db.get_latest_spoiler_id()
 
-    for user in current_users:
-        if user.last_spoiled < earliest_id:
-            earliest_id = user.last_spoiled
-
-    spoilers = db.get_spoilers_later_than(earliest_id)
-
-    for user in current_users:
-        for spoiler in spoilers:
-            if spoiler.spoiler_id > user.last_spoiled:
-                send_spoiler_to(user, spoiler)
-        db.update_user(user.user_id, last=last_spoiler)
+    for user in unnotified_users:
+        num_spoilers = last_spoiler - user.last_spoiled
+        resp = msbot.constants.RESP_UPDATE.format(num_spoilers=num_spoilers)
+        send_text_message(user.user_id, resp)
+        db.update_user(user.user_id, last_updated=last_spoiler)
 
 #send updates from MythicSpoiler every 10 minutes
 def update():
@@ -110,9 +106,23 @@ def handle_message(sender_psid, received_message):
             return msbot.constants.RESP_UNSUBBED
         return msbot.constants.RESP_ALREADY_UNSUBBED
 
+    def send(sender_psid):
+        if database.user_exists(sender_psid):
+            user = database.get_user_from_id(sender_psid)
+            last_spoiler = database.get_latest_spoiler_id()
+            spoilers = database.get_spoilers_later_than(user.last_spoiled)
+            if not spoilers:
+                return msbot.constants.RESP_UPDATE_UPDATED
+            for spoiler in spoilers:
+                send_spoiler_to(user, spoiler)
+            database.update_user(user.user_id, last_spoiled=last_spoiler)
+            return msbot.constants.RESP_UPDATE_COMPLETE
+        return msbot.constants.RESP_INVALID_UNSUBBED
+
     responses = {
         msbot.constants.HELLO: lambda id: subscribe(id),
         msbot.constants.GOODBYE: lambda id: unsubscribe(id),
+        msbot.constants.SEND: lambda id: send(id),
     }
     message = received_message.lower()
     if message in responses:
@@ -122,7 +132,7 @@ def handle_message(sender_psid, received_message):
         if database.user_exists(sender_psid):
             resp = msbot.constants.RESP_INVALID_SUBBED
 
-    send_message(sender_psid, { msbot.constants.TEXT: resp })
+    send_text_message(sender_psid, resp)
 
 def handle_postback(sender_psid, received_postback):
     pass
