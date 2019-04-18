@@ -69,7 +69,7 @@ class TestWebhook(unittest.TestCase):
     @mock.patch('webhook.send_message')
     def test_send_spoiler_to(self, send_mock):
         test_user = User((1234, 0, 0))
-        test_spoiler = Spoiler(('test', 123456, None))
+        test_spoiler = Spoiler(('test', 123456, '2019-01-01', None))
 
         test_response = {
             'attachment': {
@@ -196,9 +196,9 @@ class TestWebhook(unittest.TestCase):
     @mock.patch('webhook.send_spoiler_to')
     def test_handle_message_send_when_subbed(self, spoil_mock, send_mock, db_mock):
         alice = User(('Alice', 5, 5))
-        spoiler1 = Spoiler(('spoil1','attach1',None))
-        spoiler2 = Spoiler(('spoil2','attach2',None))
-        spoiler3 = Spoiler(('spoil3','attach3',None))
+        spoiler1 = Spoiler(('spoil1','attach1','2019-01-01',None))
+        spoiler2 = Spoiler(('spoil2','attach2','2019-01-01',None))
+        spoiler3 = Spoiler(('spoil3','attach3','2019-01-01',None))
         db = db_mock.return_value
         db.user_exists.return_value = True
         db.get_user_from_id.return_value = User(('Alice', 5, 5))

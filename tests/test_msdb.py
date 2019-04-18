@@ -1,4 +1,5 @@
 import unittest
+import datetime
 
 from msbot.msdb import MSDatabase
 from msbot.settings import TEST_DB_LOCATION
@@ -26,7 +27,7 @@ class TestMSDatabase(unittest.TestCase):
         self.assertEqual(user, self.test_db.get_user_from_id('Alice'))
 
     def test_get_spoiler_from_id(self):
-        spoiler = Spoiler(('spoil1', 'attach1', 1234))
+        spoiler = Spoiler(('spoil1', 'attach1', '2019-01-01', 1234))
         self.insert_spoiler(spoiler)
         self.assertEqual(spoiler, self.test_db.get_spoiler_from_id(1234))
 
@@ -70,8 +71,8 @@ class TestMSDatabase(unittest.TestCase):
         mock_users = [alice, bob, carol]
 
         mock_spoilers = [
-            Spoiler(('test1', 'attach1', None)),
-            Spoiler(('test2', 'attach2', None)),
+            Spoiler(('test1', 'attach1', None, None)),
+            Spoiler(('test2', 'attach2', None, None)),
         ]
 
         for user in mock_users:
@@ -107,7 +108,7 @@ class TestMSDatabase(unittest.TestCase):
         self.assertEqual(self.test_db.get_user_from_id('Alice'), changed_user)
 
     def test_spoiler_exists(self):
-        test_spoiler = Spoiler(('test_spoiler_img', 0, 0))
+        test_spoiler = Spoiler(('test_spoiler_img', 0, None, 0))
         self.assertFalse(self.test_db.spoiler_exists(test_spoiler))
         self.insert_spoiler(test_spoiler)
         self.assertTrue(self.test_db.spoiler_exists(test_spoiler.image_url))
@@ -154,6 +155,7 @@ class TestMSDatabase(unittest.TestCase):
     def test_add_spoiler(self):
         test_spoiler = 'test_spoiler_img'
         test_attach_id = '12345'
+        date = datetime.datetime.utcnow().date().strftime('%Y-%m-%d')
         self.test_db.query(
             "SELECT img FROM spoilers where img = '{test_spoiler}'"
             .format(test_spoiler=test_spoiler)
@@ -164,14 +166,16 @@ class TestMSDatabase(unittest.TestCase):
 
         self.test_db.query(
             '''
-            SELECT img FROM spoilers where img = '{test_spoiler}' AND
+            SELECT * FROM spoilers where img = '{test_spoiler}' AND
             attach_id = '{test_attach_id}'
             '''
             .format(
                 test_spoiler=test_spoiler,
-                test_attach_id=test_attach_id
+                test_attach_id=test_attach_id,
+                date=date,
             )
         )
+
         self.assertTrue(self.test_db.fetchall())
 
     def test_get_latest_spoiler_id(self):
@@ -184,9 +188,9 @@ class TestMSDatabase(unittest.TestCase):
 
     def test_get_all_spoilers(self):
         mock_spoilers = [
-            Spoiler(('test1', 'attach1', 1)),
-            Spoiler(('test2', 'attach2', 2)),
-            Spoiler(('test3', 'attach3', 3)),
+            Spoiler(('test1', 'attach1', '2019-01-01', 1)),
+            Spoiler(('test2', 'attach2', '2019-01-01', 2)),
+            Spoiler(('test3', 'attach3', '2019-01-01', 3)),
         ]
         for spoiler in mock_spoilers:
             self.insert_spoiler(spoiler)
@@ -194,9 +198,9 @@ class TestMSDatabase(unittest.TestCase):
         self.assertCountEqual(self.test_db.get_all_spoilers(), mock_spoilers)
 
     def test_get_spoilers_later_than(self):
-        spoil1 = Spoiler(('test1', 'attach1', 1))
-        spoil2 = Spoiler(('test2', 'attach2', 2))
-        spoil3 = Spoiler(('test3', 'attach3', 3))
+        spoil1 = Spoiler(('test1', 'attach1', '2019-01-01', 1))
+        spoil2 = Spoiler(('test2', 'attach2', '2019-01-01', 2))
+        spoil3 = Spoiler(('test3', 'attach3', '2019-01-01', 3))
         mock_spoilers = [spoil1, spoil2, spoil3]
         for spoiler in mock_spoilers:
             self.insert_spoiler(spoiler)
@@ -246,12 +250,14 @@ class TestMSDatabase(unittest.TestCase):
 
     def insert_spoiler(self, spoiler):
         spoiler_id = spoiler.spoiler_id if spoiler.spoiler_id != None else 'NULL'
+        spoil_date = spoiler.date_spoiled if spoiler.date_spoiled != None else '2019-01-01'
         self.test_db.write(
-            ("INSERT INTO spoilers VALUES('{mock_img}', '{mock_attach_id}', "
-             "{mock_spoil_id})")
+            ("INSERT INTO spoilers VALUES('{mock_img}', "
+             "'{mock_attach_id}', '{mock_date}', {mock_spoil_id})")
             .format(
                 mock_img=spoiler.image_url,
                 mock_attach_id=spoiler.attach_id,
+                mock_date=spoiler.date_spoiled,
                 mock_spoil_id=spoiler_id
             )
         )
