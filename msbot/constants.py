@@ -26,15 +26,15 @@ SEND = 'send'
 RECENT = 'recent'
 
 # Responses
-RESP_SUBBED = 'You are now subscribed. Say "goodbye" at any time to unsubscribe'
+RESP_SUBBED = "You are now subscribed. Say 'goodbye' at any time to unsubscribe"
 RESP_UNSUBBED = 'You have been unsubscribed from MythicSpoilerBot'
 RESP_ALREADY_SUBBED = 'You are already subscribed'
 RESP_ALREADY_UNSUBBED = 'You are not subscribed'
-RESP_INVALID_UNSUBBED = 'Invalid command. Say "hello" at any time to subscribe'
-RESP_INVALID_SUBBED = 'Invalid command. Say "goodbye" at any time to unsubscribe'
+RESP_INVALID_UNSUBBED = "Invalid command. Say 'hello' at any time to subscribe"
+RESP_INVALID_SUBBED = "Invalid command. Say 'recent' to get the latest batch of spoilers and say 'goodbye' at any time to unsubscribe"
 RESP_UPDATE = (
     "New spoilers are out! You have {num_spoilers} unseen spoiler(s). "
-    "Type '" + SEND + "' to receive all pending spoilers, or type '" + RECENT +
+    "Say '" + SEND + "' to receive all pending spoilers, or say '" + RECENT +
     "' to get just the most recent ones and mark the rest as seen."
 )
 RESP_LAST_SPOILER_INFO = "These spoilers were released on {date_string} "
