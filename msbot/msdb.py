@@ -74,7 +74,8 @@ class MSDatabase(Database):
 
     def add_spoiler(self, spoiler_img, attach_id):
         sql = '''
-        INSERT INTO spoilers VALUES('{spoiler_img}', '{attach_id}', NULL)
+        INSERT INTO spoilers VALUES('{spoiler_img}', '{attach_id}',
+        DATE('now'), NULL)
         '''.format(
             spoiler_img=spoiler_img,
             attach_id=attach_id
@@ -102,6 +103,7 @@ class MSDatabase(Database):
         CREATE TABLE IF NOT EXISTS spoilers (
             img varchar(250) NOT NULL,
             attach_id VARCHAR(50) NOT NULL,
+            date_spoiled TEXT NOT NULL,
             id INTEGER PRIMARY KEY AUTOINCREMENT
         )
         '''
