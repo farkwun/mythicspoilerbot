@@ -19,10 +19,13 @@ TOKEN = 'hub.verify_token'
 CHALLENGE = 'hub.challenge'
 SUBSCRIBE = 'subscribe'
 
+# Commands
 HELLO = 'hello'
 GOODBYE = 'goodbye'
 SEND = 'send'
+RECENT = 'recent'
 
+# Responses
 RESP_SUBBED = 'You are now subscribed. Say "goodbye" at any time to unsubscribe'
 RESP_UNSUBBED = 'You have been unsubscribed from MythicSpoilerBot'
 RESP_ALREADY_SUBBED = 'You are already subscribed'
@@ -31,7 +34,9 @@ RESP_INVALID_UNSUBBED = 'Invalid command. Say "hello" at any time to subscribe'
 RESP_INVALID_SUBBED = 'Invalid command. Say "goodbye" at any time to unsubscribe'
 RESP_UPDATE = (
     "New spoilers are out! You have {num_spoilers} unseen spoiler(s). "
-    "Type '" + SEND + "' to receive your spoilers"
+    "Type '" + SEND + "' to receive all pending spoilers, or type '" + RECENT +
+    "' to get just the most recent ones and mark the rest as seen."
 )
+RESP_LAST_SPOILER_INFO = "These spoilers were released on {date_string} "
 RESP_UPDATE_UPDATED = 'No new spoilers :('
 RESP_UPDATE_COMPLETE = 'You are now up to date'
