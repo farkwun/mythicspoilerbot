@@ -88,6 +88,17 @@ class MSDatabase(Database):
         (latest_id,) = self.fetchone()
         return latest_id if latest_id != None else 0
 
+    def get_latest_spoiler_date(self):
+        sql = 'SELECT MAX(date_spoiled) FROM spoilers'
+        self.query(sql)
+        (date,) = self.fetchone()
+        return date
+
+    def get_all_spoilers_on_date(self, date):
+        sql = "SELECT * FROM spoilers WHERE date_spoiled = '{date}'".format(date=date)
+        self.query(sql)
+        return [ Spoiler(row) for row in self.fetchall() ]
+
     def get_all_spoilers(self):
         sql = 'SELECT * FROM spoilers'
         self.query(sql)
