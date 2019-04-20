@@ -31,6 +31,23 @@ def send_message(sender_psid, response):
 def send_text_message(sender_psid, text):
     send_message(sender_psid, { msbot.constants.TEXT: text})
 
+def create_quick_reply_button(payload):
+    return {
+        msbot.constants.CONTENT_TYPE: msbot.constants.TEXT,
+        msbot.constants.TITLE: payload.capitalize(),
+        msbot.constants.PAYLOAD: payload,
+    }
+
+def send_update(sender_psid, text):
+    resp = {
+        msbot.constants.TEXT: text,
+        msbot.constants.QUICK_REPLIES: [
+            create_quick_reply_button(msbot.constants.SEND),
+            create_quick_reply_button(msbot.constants.RECENT),
+        ]
+    }
+    send_message(sender_psid, resp)
+
 def get_attach_id_for(image_url):
     print('Getting attach id for ', image_url)
     body = {
@@ -81,7 +98,7 @@ def update_users():
     for user in unnotified_users:
         num_spoilers = last_spoiler - user.last_spoiled
         resp = msbot.constants.RESP_UPDATE.format(num_spoilers=num_spoilers)
-        send_text_message(user.user_id, resp)
+        send_update(user.user_id, resp)
         db.update_user(user.user_id, last_updated=last_spoiler)
 
 #send updates from MythicSpoiler every 10 minutes

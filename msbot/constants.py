@@ -19,10 +19,15 @@ TOKEN = 'hub.verify_token'
 CHALLENGE = 'hub.challenge'
 SUBSCRIBE = 'subscribe'
 
+QUICK_REPLIES = 'quick_replies'
+CONTENT_TYPE = 'content_type'
+TITLE = 'title'
+PAYLOAD = 'payload'
+
 # Commands
 HELLO = 'hello'
 GOODBYE = 'goodbye'
-SEND = 'send'
+SEND = 'all'
 RECENT = 'recent'
 
 # Responses
@@ -31,11 +36,12 @@ RESP_UNSUBBED = 'You have been unsubscribed from MythicSpoilerBot'
 RESP_ALREADY_SUBBED = 'You are already subscribed'
 RESP_ALREADY_UNSUBBED = 'You are not subscribed'
 RESP_INVALID_UNSUBBED = "Invalid command. Say 'hello' at any time to subscribe"
-RESP_INVALID_SUBBED = "Invalid command. Say 'recent' to get the latest batch of spoilers and say 'goodbye' at any time to unsubscribe"
+RESP_INVALID_SUBBED = "Invalid command. Say 'recent' to get the latest batch of spoilers or say 'goodbye' at any time to unsubscribe"
 RESP_UPDATE = (
-    "New spoilers are out! You have {num_spoilers} unseen spoiler(s). "
-    "Say '" + SEND + "' to receive all pending spoilers, or say '" + RECENT +
-    "' to get just the most recent ones and mark the rest as seen."
+    "New spoilers are out! You have {num_spoilers} unseen spoiler(s).\n\n"
+    "Choose the '" + SEND.capitalize() + "' or '" + RECENT.capitalize() +
+    "' buttons below.\n\n" + SEND.capitalize() + " - Receive all unseen spoilers\n\n"
+    + RECENT.capitalize() + " - Receive most recent spoilers and mark remaining as seen"
 )
 RESP_LAST_SPOILER_INFO = "These spoilers were released on {date_string} "
 RESP_UPDATE_UPDATED = 'No new spoilers :('
