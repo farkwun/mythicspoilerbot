@@ -1,6 +1,10 @@
+import json
+import msbot.constants
+
 from msbot.db import Database
 from msbot.spoiler import Spoiler
 from msbot.user import User
+from msbot.user_options import UserOptions
 
 
 class MSDatabase(Database):
@@ -61,10 +65,13 @@ class MSDatabase(Database):
 
     def add_user(self, user_id):
         latest_spoiler = self.get_latest_spoiler_id()
-        sql = "INSERT INTO users VALUES('{user_id}', '{last_updated}', '{last_spoiled}')".format(
+        sql = "INSERT INTO users VALUES('{user_id}', '{last_updated}', '{last_spoiled}', '{options_json}')".format(
             user_id=user_id,
             last_updated=latest_spoiler,
             last_spoiled=latest_spoiler,
+            options_json=json.dumps(
+                UserOptions.default_options()
+            )
         )
         self.write(sql)
 
@@ -126,6 +133,7 @@ class MSDatabase(Database):
             id varchar(250) NOT NULL,
             last_updated INTEGER NOT NULL,
             last_spoiled INTEGER NOT NULL,
+            options JSON NOT NULL,
             FOREIGN KEY (last_updated) REFERENCES spoiler(id),
             FOREIGN KEY (last_spoiled) REFERENCES spoiler(id)
         )

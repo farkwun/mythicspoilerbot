@@ -22,7 +22,7 @@ class TestMSDatabase(unittest.TestCase):
         self.addCleanup(cleanup_test_db)
 
     def test_get_user_from_id(self):
-        user = User(('Alice', 0, 0))
+        user = User(('Alice', 0, 0, '{}'))
         self.insert_user(user)
         self.assertEqual(user, self.test_db.get_user_from_id('Alice'))
 
@@ -33,9 +33,9 @@ class TestMSDatabase(unittest.TestCase):
 
     def test_get_all_users(self):
         mock_users = [
-            User(('Alice', 0, 0)),
-            User(('Bob', 1, 1)),
-            User(('Carol', 2, 2)),
+            User(('Alice', 0, 0, '{}')),
+            User(('Bob', 1, 1, '{}')),
+            User(('Carol', 2, 2, '{}')),
         ]
 
         for user in mock_users:
@@ -55,7 +55,7 @@ class TestMSDatabase(unittest.TestCase):
 
         for mock_id in mock_user_ids:
             self.test_db.write(
-                "INSERT INTO users VALUES('{mock_id}', 0, 0)".format(mock_id=mock_id)
+                "INSERT INTO users VALUES('{mock_id}', 0, 0, '{{}}')".format(mock_id=mock_id)
             )
 
         self.assertEqual(
@@ -64,9 +64,9 @@ class TestMSDatabase(unittest.TestCase):
         )
 
     def test_get_all_unnotified_users(self):
-        alice = User(('Alice', 0, 2))
-        bob = User(('Bob', 1, 0))
-        carol = User(('Carol', 2, 1))
+        alice = User(('Alice', 0, 2, '{}'))
+        bob = User(('Bob', 1, 0, '{}'))
+        carol = User(('Carol', 2, 1, '{}'))
 
         mock_users = [alice, bob, carol]
 
@@ -84,26 +84,26 @@ class TestMSDatabase(unittest.TestCase):
         self.assertCountEqual(self.test_db.get_all_unnotified_users(), [alice, bob])
 
     def test_update_user(self):
-        user = User(('Alice', 0, 0))
+        user = User(('Alice', 0, 0, '{}'))
         self.insert_user(user)
 
         self.assertEqual(self.test_db.get_user_from_id('Alice'), user)
 
         self.test_db.update_user('Alice', last_updated=10)
 
-        changed_user = User(('Alice', 10, 0))
+        changed_user = User(('Alice', 10, 0, '{}'))
 
         self.assertEqual(self.test_db.get_user_from_id('Alice'), changed_user)
 
         self.test_db.update_user('Alice', last_spoiled=10)
 
-        changed_user = User(('Alice', 10, 10))
+        changed_user = User(('Alice', 10, 10, '{}'))
 
         self.assertEqual(self.test_db.get_user_from_id('Alice'), changed_user)
 
         self.test_db.update_user('Alice', last_updated= 15, last_spoiled=15)
 
-        changed_user = User(('Alice', 15, 15))
+        changed_user = User(('Alice', 15, 15, '{}'))
 
         self.assertEqual(self.test_db.get_user_from_id('Alice'), changed_user)
 
@@ -117,7 +117,7 @@ class TestMSDatabase(unittest.TestCase):
         test_user = 'test_user_id'
         self.assertFalse(self.test_db.user_exists(test_user))
         self.test_db.write(
-            "INSERT INTO users VALUES('{test_user}', 0, 0)".format(test_user=test_user)
+            "INSERT INTO users VALUES('{test_user}', 0, 0, '{{}}')".format(test_user=test_user)
         )
         self.assertTrue(self.test_db.user_exists(test_user))
 
@@ -138,7 +138,7 @@ class TestMSDatabase(unittest.TestCase):
     def test_delete_user(self):
         test_user = 'test_user_id'
         self.test_db.write(
-            "INSERT INTO users VALUES('{test_user}', 0, 0)".format(test_user=test_user)
+            "INSERT INTO users VALUES('{test_user}', 0, 0, '{{}}')".format(test_user=test_user)
         )
         self.test_db.query(
             "SELECT id FROM users where id = '{test_user}'".format(test_user=test_user)
@@ -269,11 +269,13 @@ class TestMSDatabase(unittest.TestCase):
 
     def insert_user(self, user):
         self.test_db.write(
-            ("INSERT INTO users VALUES('{mock_id}', {last_updated}, {last_spoiled})")
+            ("INSERT INTO users VALUES('{mock_id}', {last_updated}, {last_spoiled}, '{options}')")
             .format(
                 mock_id=user.user_id,
                 last_updated=user.last_updated,
-                last_spoiled=user.last_spoiled)
+                last_spoiled=user.last_spoiled,
+                options=user.options.to_json_string()
+            )
         )
 
     def insert_spoiler(self, spoiler):

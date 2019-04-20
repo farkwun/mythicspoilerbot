@@ -29,6 +29,9 @@ HELLO = 'hello'
 GOODBYE = 'goodbye'
 SEND = 'all'
 RECENT = 'recent'
+UPDATE_MODE = 'update_mode'
+POLL_MODE = 'poll'
+ASAP_MODE = 'asap'
 
 # Responses
 RESP_SUBBED = "You are now subscribed. Say 'goodbye' at any time to unsubscribe"
