@@ -119,7 +119,7 @@ class TestWebhook(unittest.TestCase):
         self.assertEqual(db.add_spoiler.call_count, len(calls))
 
     @mock.patch('msbot.msdb.MSDatabase')
-    @mock.patch('webhook.send_text_message')
+    @mock.patch('webhook.send_update')
     def test_update_users(self, send_mock, db_mock):
         db = db_mock.return_value
 
