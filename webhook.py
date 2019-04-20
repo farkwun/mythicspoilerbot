@@ -90,16 +90,37 @@ def update_spoilers():
     for spoiler, attach_id in attach_dict.items():
         db.add_spoiler(spoiler, attach_id)
 
-def update_users():
+def update_user(user):
     db = msbot.msdb.MSDatabase(db_file)
-    unnotified_users = db.get_all_unnotified_users()
     last_spoiler = db.get_latest_spoiler_id()
 
-    for user in unnotified_users:
+    def poll(user):
         num_spoilers = last_spoiler - user.last_spoiled
         resp = msbot.constants.RESP_UPDATE.format(num_spoilers=num_spoilers)
         send_update(user.user_id, resp)
-        db.update_user(user.user_id, last_updated=last_spoiler)
+
+    def asap(user):
+        handle_message(user.user_id, msbot.constants.SEND)
+
+    update_modes = {
+        msbot.constants.POLL_MODE: lambda user: poll(user),
+        msbot.constants.ASAP_MODE: lambda user: asap(user),
+    }
+
+    user_mode = user.options.update_mode
+
+    if user_mode in update_modes:
+        update_modes[user_mode](user)
+    else:
+        poll(user)
+
+    db.update_user(user.user_id, last_updated=last_spoiler)
+
+def update_users():
+    db = msbot.msdb.MSDatabase(db_file)
+    unnotified_users = db.get_all_unnotified_users()
+    for user in unnotified_users:
+        update_user(user)
 
 #send updates from MythicSpoiler every 10 minutes
 def update():

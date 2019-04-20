@@ -119,6 +119,39 @@ class TestWebhook(unittest.TestCase):
         self.assertEqual(db.add_spoiler.call_count, len(calls))
 
     @mock.patch('msbot.msdb.MSDatabase')
+    @mock.patch('webhook.handle_message')
+    @mock.patch('webhook.send_update')
+    def test_update_user(self, send_mock, handle_mock, db_mock):
+        db = db_mock.return_value
+
+        # default user
+        alice = User(('Alice', 0, 0, '{}'))
+        db.get_latest_spoiler_id.return_value = 2
+        webhook.update_user(alice)
+        send_mock.assert_called_once_with(alice.user_id,
+                                          msbot.constants.RESP_UPDATE
+                                          .format(num_spoilers=2)
+                                          )
+
+        # asap user
+        alice.options.update_mode = msbot.constants.ASAP_MODE
+        webhook.update_user(alice)
+        handle_mock.assert_called_once_with(alice.user_id,
+                                            msbot.constants.SEND)
+
+        # unsupported mode
+        send_mock.reset_mock()
+        alice = User(('Alice', 0, 0, '{}'))
+        db.get_latest_spoiler_id.return_value = 2
+        alice.options.update_mode = 'UNSUPPORTED'
+        webhook.update_user(alice)
+        send_mock.assert_called_once_with(alice.user_id,
+                                          msbot.constants.RESP_UPDATE
+                                          .format(num_spoilers=2)
+                                          )
+
+
+    @mock.patch('msbot.msdb.MSDatabase')
     @mock.patch('webhook.send_update')
     def test_update_users(self, send_mock, db_mock):
         db = db_mock.return_value
@@ -249,14 +282,14 @@ class TestWebhook(unittest.TestCase):
     @mock.patch('webhook.send_text_message')
     @mock.patch('webhook.send_spoiler_to')
     def test_handle_message_recent_when_subbed(self, spoil_mock, send_mock, db_mock):
-        alice = User(('Alice', 8, 8))
+        alice = User(('Alice', 8, 8, '{}'))
         latest_date = '2019-02-02'
         spoiler1 = Spoiler(('spoil1','attach1', latest_date, None))
         spoiler2 = Spoiler(('spoil2','attach2', latest_date, None))
 
         db = db_mock.return_value
         db.user_exists.return_value = True
-        db.get_user_from_id.return_value = User(('Alice', 8, 8))
+        db.get_user_from_id.return_value = User(('Alice', 8, 8, '{}'))
 
         latest_spoiler = 8
         db.get_latest_spoiler_id.return_value = latest_spoiler
