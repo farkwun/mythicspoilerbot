@@ -119,10 +119,27 @@ def handle_message(sender_psid, received_message):
             return msbot.constants.RESP_UPDATE_COMPLETE
         return msbot.constants.RESP_INVALID_UNSUBBED
 
+    def recent(sender_psid):
+        if database.user_exists(sender_psid):
+            user = database.get_user_from_id(sender_psid)
+            last_spoiler = database.get_latest_spoiler_id()
+            last_spoil_date = database.get_latest_spoiler_date()
+            spoilers = database.get_all_spoilers_on_date(last_spoil_date)
+            for spoiler in spoilers:
+                send_spoiler_to(user, spoiler)
+            database.update_user(
+                user.user_id,
+                last_updated=last_spoiler,
+                last_spoiled=last_spoiler
+            )
+            return msbot.constants.RESP_LAST_SPOILER_INFO.format(date_string=last_spoil_date)
+        return msbot.constants.RESP_INVALID_UNSUBBED
+
     responses = {
         msbot.constants.HELLO: lambda id: subscribe(id),
         msbot.constants.GOODBYE: lambda id: unsubscribe(id),
         msbot.constants.SEND: lambda id: send(id),
+        msbot.constants.RECENT: lambda id: recent(id),
     }
     message = received_message.lower()
     if message in responses:

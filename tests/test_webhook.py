@@ -234,6 +234,59 @@ class TestWebhook(unittest.TestCase):
         db.update_user.called_once_with(alice.user_id, latest_spoiler)
 
     @mock.patch('msbot.msdb.MSDatabase')
+    @mock.patch('webhook.send_text_message')
+    def test_handle_message_recent_when_unsubbed(self, send_mock, db_mock):
+        db = db_mock.return_value
+        db.user_exists.return_value = False
+        sender_psid = 1234
+
+        webhook.handle_message(sender_psid, msbot.constants.RECENT)
+        send_mock.assert_called_once_with(
+            sender_psid,
+            msbot.constants.RESP_INVALID_UNSUBBED)
+
+    @mock.patch('msbot.msdb.MSDatabase')
+    @mock.patch('webhook.send_text_message')
+    @mock.patch('webhook.send_spoiler_to')
+    def test_handle_message_recent_when_subbed(self, spoil_mock, send_mock, db_mock):
+        alice = User(('Alice', 8, 8))
+        latest_date = '2019-02-02'
+        spoiler1 = Spoiler(('spoil1','attach1', latest_date, None))
+        spoiler2 = Spoiler(('spoil2','attach2', latest_date, None))
+
+        db = db_mock.return_value
+        db.user_exists.return_value = True
+        db.get_user_from_id.return_value = User(('Alice', 8, 8))
+
+        latest_spoiler = 8
+        db.get_latest_spoiler_id.return_value = latest_spoiler
+        db.get_latest_spoiler_date.return_value = latest_date
+        db.get_all_spoilers_on_date.return_value = [
+            spoiler1,
+            spoiler2,
+        ]
+
+        sender_psid = 1234
+
+        # new spoilers
+        webhook.handle_message(sender_psid, msbot.constants.RECENT)
+        calls = [
+            mock.call(alice, spoiler1),
+            mock.call(alice, spoiler2),
+        ]
+
+        spoil_mock.assert_has_calls(calls, any_order=True)
+        self.assertEqual(spoil_mock.call_count, len(calls))
+        send_mock.assert_called_once_with(
+            sender_psid,
+            msbot.constants.RESP_LAST_SPOILER_INFO.format(date_string=latest_date)
+        )
+        db.update_user.called_once_with(alice.user_id,
+                                        latest_spoiler,
+                                        latest_spoiler
+        )
+
+    @mock.patch('msbot.msdb.MSDatabase')
     @mock.patch('webhook.send_message')
     def test_handle_message_unsub_when_subbed(self, send_mock, db_mock):
         db = db_mock.return_value

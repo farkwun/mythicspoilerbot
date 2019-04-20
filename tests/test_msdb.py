@@ -186,6 +186,34 @@ class TestMSDatabase(unittest.TestCase):
 
         self.assertEqual(self.test_db.get_latest_spoiler_id(), 4)
 
+    def test_get_latest_spoiler_date(self):
+        spoil1 = Spoiler(('test1', 'attach1', '2019-01-01', 1))
+        spoil2 = Spoiler(('test2', 'attach2', '2019-01-02', 2))
+        spoil3 = Spoiler(('test3', 'attach3', '2018-01-01', 3))
+
+        mock_spoilers = [spoil1, spoil2, spoil3]
+
+        for s in mock_spoilers:
+            self.insert_spoiler(s)
+
+        self.assertEqual(self.test_db.get_latest_spoiler_date(), '2019-01-02')
+
+
+    def test_get_all_spoilers_on_date(self):
+        spoil1 = Spoiler(('test1', 'attach1', '2019-01-01', 1))
+        spoil2 = Spoiler(('test2', 'attach2', '2019-01-02', 2))
+        spoil3 = Spoiler(('test3', 'attach3', '2019-01-02', 3))
+
+        mock_spoilers = [spoil1, spoil2, spoil3]
+
+        for s in mock_spoilers:
+            self.insert_spoiler(s)
+
+        self.assertCountEqual(
+            self.test_db.get_all_spoilers_on_date('2019-01-02'),
+            [spoil2, spoil3]
+        )
+
     def test_get_all_spoilers(self):
         mock_spoilers = [
             Spoiler(('test1', 'attach1', '2019-01-01', 1)),
