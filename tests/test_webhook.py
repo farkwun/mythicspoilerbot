@@ -213,7 +213,7 @@ class TestWebhook(unittest.TestCase):
             { msbot.constants.TEXT: msbot.constants.RESP_ALREADY_UNSUBBED })
 
     @mock.patch('msbot.msdb.MSDatabase')
-    @mock.patch('webhook.send_text_message')
+    @mock.patch('webhook.send_message')
     def test_handle_message_send_when_unsubbed(self, send_mock, db_mock):
         db = db_mock.return_value
         db.user_exists.return_value = False
@@ -222,10 +222,13 @@ class TestWebhook(unittest.TestCase):
         webhook.handle_message(sender_psid, msbot.constants.SEND)
         send_mock.assert_called_once_with(
             sender_psid,
-            msbot.constants.RESP_INVALID_UNSUBBED)
+            webhook.to_text_response(
+                msbot.constants.RESP_INVALID_UNSUBBED
+            )
+        )
 
     @mock.patch('msbot.msdb.MSDatabase')
-    @mock.patch('webhook.send_text_message')
+    @mock.patch('webhook.send_message')
     @mock.patch('webhook.send_spoiler_to')
     def test_handle_message_send_when_subbed(self, spoil_mock, send_mock, db_mock):
         alice = User(('Alice', 5, 5, '{}'))
@@ -244,7 +247,10 @@ class TestWebhook(unittest.TestCase):
         webhook.handle_message(sender_psid, msbot.constants.SEND)
         send_mock.assert_called_once_with(
             sender_psid,
-            msbot.constants.RESP_UPDATE_UPDATED)
+            webhook.to_text_response(
+                msbot.constants.RESP_UPDATE_UPDATED
+            )
+        )
 
         # new spoilers
         send_mock.reset_mock()
@@ -263,11 +269,14 @@ class TestWebhook(unittest.TestCase):
         self.assertEqual(spoil_mock.call_count, len(calls))
         send_mock.assert_called_once_with(
             sender_psid,
-            msbot.constants.RESP_UPDATE_COMPLETE)
+            webhook.to_text_response(
+                msbot.constants.RESP_UPDATE_COMPLETE
+            )
+        )
         db.update_user.called_once_with(alice.user_id, latest_spoiler)
 
     @mock.patch('msbot.msdb.MSDatabase')
-    @mock.patch('webhook.send_text_message')
+    @mock.patch('webhook.send_message')
     def test_handle_message_recent_when_unsubbed(self, send_mock, db_mock):
         db = db_mock.return_value
         db.user_exists.return_value = False
@@ -276,10 +285,13 @@ class TestWebhook(unittest.TestCase):
         webhook.handle_message(sender_psid, msbot.constants.RECENT)
         send_mock.assert_called_once_with(
             sender_psid,
-            msbot.constants.RESP_INVALID_UNSUBBED)
+            webhook.to_text_response(
+                msbot.constants.RESP_INVALID_UNSUBBED
+            )
+        )
 
     @mock.patch('msbot.msdb.MSDatabase')
-    @mock.patch('webhook.send_text_message')
+    @mock.patch('webhook.send_message')
     @mock.patch('webhook.send_spoiler_to')
     def test_handle_message_recent_when_subbed(self, spoil_mock, send_mock, db_mock):
         alice = User(('Alice', 8, 8, '{}'))
@@ -312,7 +324,9 @@ class TestWebhook(unittest.TestCase):
         self.assertEqual(spoil_mock.call_count, len(calls))
         send_mock.assert_called_once_with(
             sender_psid,
-            msbot.constants.RESP_LAST_SPOILER_INFO.format(date_string=latest_date)
+            webhook.to_text_response(
+                msbot.constants.RESP_LAST_SPOILER_INFO.format(date_string=latest_date)
+            )
         )
         db.update_user.called_once_with(alice.user_id,
                                         latest_spoiler,
@@ -341,7 +355,10 @@ class TestWebhook(unittest.TestCase):
         webhook.handle_message(sender_psid, 'unsupported_message')
         send_mock.assert_called_once_with(
             sender_psid,
-            { msbot.constants.TEXT: msbot.constants.RESP_INVALID_SUBBED })
+            webhook.to_text_response(
+                msbot.constants.RESP_INVALID_SUBBED
+            )
+        )
 
     @mock.patch('msbot.msdb.MSDatabase')
     @mock.patch('webhook.send_message')
@@ -353,7 +370,8 @@ class TestWebhook(unittest.TestCase):
         webhook.handle_message(sender_psid, 'unsupported_message')
         send_mock.assert_called_once_with(
             sender_psid,
-            { msbot.constants.TEXT: msbot.constants.RESP_INVALID_UNSUBBED })
+            webhook.to_text_response(msbot.constants.RESP_INVALID_UNSUBBED)
+        )
 
     def test_webhook_event_text_message_received(self):
         with boddle(

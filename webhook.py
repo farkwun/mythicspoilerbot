@@ -31,6 +31,9 @@ def send_message(sender_psid, response):
 def send_text_message(sender_psid, text):
     send_message(sender_psid, { msbot.constants.TEXT: text})
 
+def to_text_response(text):
+    return { msbot.constants.TEXT: text }
+
 def create_quick_reply_button(payload):
     return {
         msbot.constants.CONTENT_TYPE: msbot.constants.TEXT,
@@ -174,10 +177,10 @@ def handle_message(sender_psid, received_message):
         return msbot.constants.RESP_INVALID_UNSUBBED
 
     responses = {
-        msbot.constants.HELLO: lambda id: subscribe(id),
-        msbot.constants.GOODBYE: lambda id: unsubscribe(id),
-        msbot.constants.SEND: lambda id: send(id),
-        msbot.constants.RECENT: lambda id: recent(id),
+        msbot.constants.HELLO: lambda id: to_text_response(subscribe(id)),
+        msbot.constants.GOODBYE: lambda id: to_text_response(unsubscribe(id)),
+        msbot.constants.SEND: lambda id: to_text_response(send(id)),
+        msbot.constants.RECENT: lambda id: to_text_response(recent(id)),
     }
     message = received_message.lower()
     if message in responses:
@@ -186,8 +189,9 @@ def handle_message(sender_psid, received_message):
         resp = msbot.constants.RESP_INVALID_UNSUBBED
         if database.user_exists(sender_psid):
             resp = msbot.constants.RESP_INVALID_SUBBED
+        resp = to_text_response(resp)
 
-    send_text_message(sender_psid, resp)
+    send_message(sender_psid, resp)
 
 def handle_postback(sender_psid, received_postback):
     pass
