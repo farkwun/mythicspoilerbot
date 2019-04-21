@@ -41,15 +41,18 @@ def create_quick_reply_button(payload):
         msbot.constants.PAYLOAD: payload,
     }
 
-def send_update(sender_psid, text):
-    resp = {
+def text_quick_reply_response(text, buttons):
+    return {
         msbot.constants.TEXT: text,
-        msbot.constants.QUICK_REPLIES: [
-            create_quick_reply_button(msbot.constants.SEND),
-            create_quick_reply_button(msbot.constants.RECENT),
-        ]
+        msbot.constants.QUICK_REPLIES: buttons
     }
-    send_message(sender_psid, resp)
+
+def send_update(sender_psid, text):
+    buttons = [
+        create_quick_reply_button(msbot.constants.SEND_CMD),
+        create_quick_reply_button(msbot.constants.RECENT_CMD),
+    ]
+    send_message(sender_psid, text_quick_reply_response(text, buttons))
 
 def get_attach_id_for(image_url):
     print('Getting attach id for ', image_url)
@@ -103,11 +106,11 @@ def update_user(user):
         send_update(user.user_id, resp)
 
     def asap(user):
-        handle_message(user.user_id, msbot.constants.SEND)
+        handle_message(user.user_id, msbot.constants.SEND_CMD)
 
     update_modes = {
-        msbot.constants.POLL_MODE: lambda user: poll(user),
-        msbot.constants.ASAP_MODE: lambda user: asap(user),
+        msbot.constants.POLL_MODE_CMD: lambda user: poll(user),
+        msbot.constants.ASAP_MODE_CMD: lambda user: asap(user),
     }
 
     user_mode = user.options.update_mode
@@ -177,11 +180,13 @@ def handle_message(sender_psid, received_message):
         return msbot.constants.RESP_INVALID_UNSUBBED
 
     responses = {
-        msbot.constants.HELLO: lambda id: to_text_response(subscribe(id)),
-        msbot.constants.GOODBYE: lambda id: to_text_response(unsubscribe(id)),
-        msbot.constants.SEND: lambda id: to_text_response(send(id)),
-        msbot.constants.RECENT: lambda id: to_text_response(recent(id)),
+        msbot.constants.HELLO_CMD: lambda id: to_text_response(subscribe(id)),
+        msbot.constants.GOODBYE_CMD: lambda id: to_text_response(unsubscribe(id)),
+        msbot.constants.SEND_CMD: lambda id: to_text_response(send(id)),
+        msbot.constants.RECENT_CMD: lambda id: to_text_response(recent(id)),
+        msbot.constants.MODE_CMD: lambda id: mode(id),
     }
+
     message = received_message.lower()
     if message in responses:
         resp = responses[message](sender_psid)

@@ -134,10 +134,10 @@ class TestWebhook(unittest.TestCase):
                                           )
 
         # asap user
-        alice.options.update_mode = msbot.constants.ASAP_MODE
+        alice.options.update_mode = msbot.constants.ASAP_MODE_CMD
         webhook.update_user(alice)
         handle_mock.assert_called_once_with(alice.user_id,
-                                            msbot.constants.SEND)
+                                            msbot.constants.SEND_CMD)
 
         # unsupported mode
         send_mock.reset_mock()
@@ -183,7 +183,7 @@ class TestWebhook(unittest.TestCase):
         db.user_exists.return_value = False
         sender_psid = 1234
 
-        webhook.handle_message(sender_psid, msbot.constants.HELLO)
+        webhook.handle_message(sender_psid, msbot.constants.HELLO_CMD)
         send_mock.assert_called_once_with(
             sender_psid,
             { msbot.constants.TEXT: msbot.constants.RESP_SUBBED })
@@ -195,7 +195,7 @@ class TestWebhook(unittest.TestCase):
         db.user_exists.return_value = True
         sender_psid = 1234
 
-        webhook.handle_message(sender_psid, msbot.constants.HELLO)
+        webhook.handle_message(sender_psid, msbot.constants.HELLO_CMD)
         send_mock.assert_called_once_with(
             sender_psid,
             { msbot.constants.TEXT: msbot.constants.RESP_ALREADY_SUBBED })
@@ -207,7 +207,7 @@ class TestWebhook(unittest.TestCase):
         db.user_exists.return_value = False
         sender_psid = 1234
 
-        webhook.handle_message(sender_psid, msbot.constants.GOODBYE)
+        webhook.handle_message(sender_psid, msbot.constants.GOODBYE_CMD)
         send_mock.assert_called_once_with(
             sender_psid,
             { msbot.constants.TEXT: msbot.constants.RESP_ALREADY_UNSUBBED })
@@ -219,7 +219,7 @@ class TestWebhook(unittest.TestCase):
         db.user_exists.return_value = False
         sender_psid = 1234
 
-        webhook.handle_message(sender_psid, msbot.constants.SEND)
+        webhook.handle_message(sender_psid, msbot.constants.SEND_CMD)
         send_mock.assert_called_once_with(
             sender_psid,
             webhook.to_text_response(
@@ -244,7 +244,7 @@ class TestWebhook(unittest.TestCase):
         sender_psid = 1234
 
         # no new spoilers
-        webhook.handle_message(sender_psid, msbot.constants.SEND)
+        webhook.handle_message(sender_psid, msbot.constants.SEND_CMD)
         send_mock.assert_called_once_with(
             sender_psid,
             webhook.to_text_response(
@@ -259,7 +259,7 @@ class TestWebhook(unittest.TestCase):
             spoiler2,
             spoiler3,
         ]
-        webhook.handle_message(sender_psid, msbot.constants.SEND)
+        webhook.handle_message(sender_psid, msbot.constants.SEND_CMD)
         calls = [
             mock.call(alice, spoiler1),
             mock.call(alice, spoiler2),
@@ -282,7 +282,7 @@ class TestWebhook(unittest.TestCase):
         db.user_exists.return_value = False
         sender_psid = 1234
 
-        webhook.handle_message(sender_psid, msbot.constants.RECENT)
+        webhook.handle_message(sender_psid, msbot.constants.RECENT_CMD)
         send_mock.assert_called_once_with(
             sender_psid,
             webhook.to_text_response(
@@ -314,7 +314,7 @@ class TestWebhook(unittest.TestCase):
         sender_psid = 1234
 
         # new spoilers
-        webhook.handle_message(sender_psid, msbot.constants.RECENT)
+        webhook.handle_message(sender_psid, msbot.constants.RECENT_CMD)
         calls = [
             mock.call(alice, spoiler1),
             mock.call(alice, spoiler2),
@@ -340,7 +340,7 @@ class TestWebhook(unittest.TestCase):
         db.user_exists.return_value = True
         sender_psid = 1234
 
-        webhook.handle_message(sender_psid, msbot.constants.GOODBYE)
+        webhook.handle_message(sender_psid, msbot.constants.GOODBYE_CMD)
         send_mock.assert_called_once_with(
             sender_psid,
             { msbot.constants.TEXT: msbot.constants.RESP_UNSUBBED })
