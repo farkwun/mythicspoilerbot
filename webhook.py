@@ -28,9 +28,6 @@ def send_message(sender_psid, response):
 
     r = requests.post(msbot.constants.FB_MESSAGE_URL, params=params, json=request_body)
 
-def send_text_message(sender_psid, text):
-    send_message(sender_psid, { msbot.constants.TEXT: text})
-
 def to_text_response(text):
     return { msbot.constants.TEXT: text }
 
@@ -47,6 +44,8 @@ def text_quick_reply_response(text, buttons):
         msbot.constants.QUICK_REPLIES: buttons
     }
 
+# TODO: Refactor this to take in a user object and a last spoiled id
+# Also write a test for it
 def send_update(sender_psid, text):
     buttons = [
         create_quick_reply_button(msbot.constants.SEND_CMD),
@@ -179,12 +178,46 @@ def handle_message(sender_psid, received_message):
             return msbot.constants.RESP_LAST_SPOILER_INFO.format(date_string=last_spoil_date)
         return msbot.constants.RESP_INVALID_UNSUBBED
 
+    def mode(sender_psid):
+        if database.user_exists(sender_psid):
+            user = database.get_user_from_id(sender_psid)
+            text = msbot.constants.RESP_MODE_PROMPT.format(
+                    update_mode=user.options.update_mode
+                )
+            buttons = [
+                create_quick_reply_button(msbot.constants.POLL_MODE_CMD),
+                create_quick_reply_button(msbot.constants.ASAP_MODE_CMD),
+            ]
+            return text_quick_reply_response(text, buttons)
+        return to_text_response(msbot.constants.RESP_INVALID_UNSUBBED)
+
+    def change_update_mode(sender_psid, mode):
+        if database.user_exists(sender_psid):
+            database.update_user(
+                sender_psid,
+                options={
+                    msbot.constants.UPDATE_MODE: mode
+                }
+            )
+            return to_text_response(
+                msbot.constants.RESP_MODE_COMPLETE.format(update_mode=mode)
+            )
+        return to_text_response(msbot.constants.RESP_INVALID_UNSUBBED)
+
     responses = {
         msbot.constants.HELLO_CMD: lambda id: to_text_response(subscribe(id)),
         msbot.constants.GOODBYE_CMD: lambda id: to_text_response(unsubscribe(id)),
         msbot.constants.SEND_CMD: lambda id: to_text_response(send(id)),
         msbot.constants.RECENT_CMD: lambda id: to_text_response(recent(id)),
         msbot.constants.MODE_CMD: lambda id: mode(id),
+        msbot.constants.POLL_MODE_CMD: lambda id: change_update_mode(
+            id,
+            msbot.constants.POLL_MODE_CMD
+        ),
+        msbot.constants.ASAP_MODE_CMD: lambda id: change_update_mode(
+            id,
+            msbot.constants.ASAP_MODE_CMD
+        ),
     }
 
     message = received_message.lower()

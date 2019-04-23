@@ -51,10 +51,11 @@ RESP_LAST_SPOILER_INFO = "These spoilers were released on {date_string} "
 RESP_UPDATE_UPDATED = 'No new spoilers :('
 RESP_UPDATE_COMPLETE = 'You are now up to date'
 RESP_MODE_PROMPT = (
-    "Change your update mode! Your current update mode is {update_mode}.\n\n"
+    "Change your update mode! Your current update mode is '{update_mode}'.\n\n"
     "Choose the '" + POLL_MODE_CMD.capitalize() + "' or '" + ASAP_MODE_CMD.capitalize() +
-    "' buttons below.\n\n" + POLL_MODE_CMD.capitalize() + " - When new spoilers are"
-    "available, I'll send a prompt so you can get spoilers at your pace.\n\n"
-    + ASAP_MODE_CMD.capitalize() + "'When new spoilers are available, I'll send you "
-    "the spoilers as soon as I get them so you can get spoilers ASAP_MODE."
+    "' buttons below.\n\n" + POLL_MODE_CMD.capitalize() + " - When new spoilers are "
+    "available, I'll send a prompt so you can get spoilers at your pace\n\n"
+    + ASAP_MODE_CMD.capitalize() + " - When new spoilers are available, I'll send you "
+    "the spoilers as soon as I get them so you can get spoilers ASAP"
 )
+RESP_MODE_COMPLETE = "Your update mode is now '{update_mode}'"

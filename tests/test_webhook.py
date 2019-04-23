@@ -57,6 +57,42 @@ class TestWebhook(unittest.TestCase):
 
         self.assertDictEqual(request_body, mock_request_body)
 
+    def test_to_text_response(self):
+        text = 'test_text'
+        self.assertDictEqual(
+            webhook.to_text_response(text),
+            {
+                msbot.constants.TEXT: text
+            }
+        )
+
+    def test_create_quick_reply_button(self):
+        payload = 'test_payload'
+        self.assertDictEqual(
+            webhook.create_quick_reply_button(payload),
+            {
+                msbot.constants.CONTENT_TYPE: msbot.constants.TEXT,
+                msbot.constants.TITLE: payload.capitalize(),
+                msbot.constants.PAYLOAD: payload,
+            }
+        )
+
+    def test_text_quick_reply_response(self):
+        text = 'test_text'
+        buttons = [
+            webhook.create_quick_reply_button('test1'),
+            webhook.create_quick_reply_button('test2'),
+            webhook.create_quick_reply_button('test3'),
+        ]
+
+        self.assertDictEqual(
+            webhook.text_quick_reply_response(text, buttons),
+            {
+                msbot.constants.TEXT: text,
+                msbot.constants.QUICK_REPLIES: buttons,
+            }
+        )
+
     def test_get_attach_id_for(self):
         test_url = 'www.fake.com'
         attach_id = 123456
@@ -335,7 +371,144 @@ class TestWebhook(unittest.TestCase):
 
     @mock.patch('msbot.msdb.MSDatabase')
     @mock.patch('webhook.send_message')
+    def test_handle_message_mode_when_unsubbed(self, send_mock, db_mock):
+        db = db_mock.return_value
+        db.user_exists.return_value = False
+        sender_psid = 1234
+
+        webhook.handle_message(sender_psid, msbot.constants.MODE_CMD)
+        send_mock.assert_called_once_with(
+            sender_psid,
+            webhook.to_text_response(msbot.constants.RESP_INVALID_UNSUBBED)
+        )
+
+    @mock.patch('msbot.msdb.MSDatabase')
+    @mock.patch('webhook.send_message')
+    def test_handle_message_mode_when_subbed(self, send_mock, db_mock):
+        db = db_mock.return_value
+        db.user_exists.return_value = True
+        sender_psid = 1234
+
+        db.get_user_from_id.return_value = User(
+            ('Alice',
+             0,
+             0,
+             json.dumps(
+                 {
+                     msbot.constants.UPDATE_MODE: msbot.constants.POLL_MODE_CMD
+                 }
+             )
+            )
+        )
+
+        text = msbot.constants.RESP_MODE_PROMPT.format(
+            update_mode = msbot.constants.POLL_MODE_CMD
+        )
+
+        buttons = [
+            webhook.create_quick_reply_button(msbot.constants.POLL_MODE_CMD),
+            webhook.create_quick_reply_button(msbot.constants.ASAP_MODE_CMD),
+        ]
+
+        webhook.handle_message(sender_psid, msbot.constants.MODE_CMD)
+        send_mock.assert_called_once_with(
+            sender_psid,
+            webhook.text_quick_reply_response(text, buttons)
+        )
+
+    @mock.patch('msbot.msdb.MSDatabase')
+    @mock.patch('webhook.send_message')
+    def test_handle_message_poll_when_unsubbed(
+        self,
+        send_mock,
+        db_mock
+    ):
+        db = db_mock.return_value
+        db.user_exists.return_value = False
+        sender_psid = 1234
+
+        webhook.handle_message(sender_psid, msbot.constants.POLL_MODE_CMD)
+        send_mock.assert_called_once_with(
+            sender_psid,
+            webhook.to_text_response(msbot.constants.RESP_INVALID_UNSUBBED)
+        )
+
+    @mock.patch('msbot.msdb.MSDatabase')
+    @mock.patch('webhook.send_message')
+    def test_handle_message_poll_when_subbed(
+        self,
+        send_mock,
+        db_mock
+    ):
+        db = db_mock.return_value
+        db.user_exists.return_value = True
+        sender_psid = 1234
+
+        webhook.handle_message(sender_psid, msbot.constants.POLL_MODE_CMD)
+        db.update_user.called_once_with(
+            sender_psid,
+            options={
+                msbot.constants.UPDATE_MODE: msbot.constants.POLL_MODE_CMD
+            }
+        )
+        send_mock.assert_called_once_with(
+            sender_psid,
+            webhook.to_text_response(
+                msbot.constants.RESP_MODE_COMPLETE.format(
+                    update_mode=msbot.constants.POLL_MODE_CMD
+                )
+            )
+        )
+
+    @mock.patch('msbot.msdb.MSDatabase')
+    @mock.patch('webhook.send_message')
+    def test_handle_message_asap_when_unsubbed(
+        self,
+        send_mock,
+        db_mock
+    ):
+        db = db_mock.return_value
+        db.user_exists.return_value = False
+        sender_psid = 1234
+
+        webhook.handle_message(sender_psid, msbot.constants.ASAP_MODE_CMD)
+        send_mock.assert_called_once_with(
+            sender_psid,
+            webhook.to_text_response(msbot.constants.RESP_INVALID_UNSUBBED)
+        )
+
+    @mock.patch('msbot.msdb.MSDatabase')
+    @mock.patch('webhook.send_message')
+    def test_handle_message_asap_when_subbed(
+        self,
+        send_mock,
+        db_mock
+    ):
+        db = db_mock.return_value
+        db.user_exists.return_value = True
+        sender_psid = 1234
+
+        webhook.handle_message(sender_psid, msbot.constants.ASAP_MODE_CMD)
+        db.update_user.called_once_with(
+            sender_psid,
+            options={
+                msbot.constants.UPDATE_MODE: msbot.constants.ASAP_MODE_CMD
+            }
+        )
+        send_mock.assert_called_once_with(
+            sender_psid,
+            webhook.to_text_response(
+                msbot.constants.RESP_MODE_COMPLETE.format(
+                    update_mode=msbot.constants.ASAP_MODE_CMD
+                )
+            )
+        )
+
+    @mock.patch('msbot.msdb.MSDatabase')
+    @mock.patch('webhook.send_message')
     def test_handle_message_unsub_when_subbed(self, send_mock, db_mock):
+        # TODO: This stuff below gets re-used so often
+        # we might as well have it as part of setup
         db = db_mock.return_value
         db.user_exists.return_value = True
         sender_psid = 1234
