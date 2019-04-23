@@ -1,5 +1,7 @@
 import unittest
 import datetime
+import json
+import msbot.constants
 
 from msbot.msdb import MSDatabase
 from msbot.settings import TEST_DB_LOCATION
@@ -83,29 +85,48 @@ class TestMSDatabase(unittest.TestCase):
 
         self.assertCountEqual(self.test_db.get_all_unnotified_users(), [alice, bob])
 
+    #TODO: Split out into multiple tests
     def test_update_user(self):
         user = User(('Alice', 0, 0, '{}'))
         self.insert_user(user)
-
         self.assertEqual(self.test_db.get_user_from_id('Alice'), user)
 
-        self.test_db.update_user('Alice', last_updated=10)
+        # last_updated
+        user = User(('Bob', 0, 0, '{}'))
+        self.insert_user(user)
+        self.test_db.update_user('Bob', last_updated=10)
+        user.last_updated = 10
+        self.assertEqual(self.test_db.get_user_from_id('Bob'), user)
 
-        changed_user = User(('Alice', 10, 0, '{}'))
+        # last_spoiled
+        user = User(('Carol', 0, 0, '{}'))
+        self.insert_user(user)
+        self.test_db.update_user('Carol', last_spoiled=10)
+        user.last_spoiled = 10
+        self.assertEqual(self.test_db.get_user_from_id('Carol'), user)
 
-        self.assertEqual(self.test_db.get_user_from_id('Alice'), changed_user)
+        # options - update_mode, no previous update_mode
+        user = User(('Dan', 0, 0, '{}'))
+        self.insert_user(user)
+        mock_options = {
+            msbot.constants.UPDATE_MODE: msbot.constants.POLL_MODE_CMD
+        }
+        self.test_db.update_user('Dan', options=mock_options)
+        user.options.update_mode = msbot.constants.POLL_MODE_CMD
+        self.assertEqual(self.test_db.get_user_from_id('Dan'), user)
 
-        self.test_db.update_user('Alice', last_spoiled=10)
-
-        changed_user = User(('Alice', 10, 10, '{}'))
-
-        self.assertEqual(self.test_db.get_user_from_id('Alice'), changed_user)
-
-        self.test_db.update_user('Alice', last_updated= 15, last_spoiled=15)
-
-        changed_user = User(('Alice', 15, 15, '{}'))
-
-        self.assertEqual(self.test_db.get_user_from_id('Alice'), changed_user)
+        # options - update_mode, existing update_mode
+        mock_options = {
+            msbot.constants.UPDATE_MODE: msbot.constants.POLL_MODE_CMD
+        }
+        user = User(('Erin', 0, 0, json.dumps(mock_options)))
+        self.insert_user(user)
+        mock_options = {
+            msbot.constants.UPDATE_MODE: msbot.constants.ASAP_MODE_CMD
+        }
+        self.test_db.update_user('Erin', options=mock_options)
+        user.options.update_mode = msbot.constants.ASAP_MODE_CMD
+        self.assertEqual(self.test_db.get_user_from_id('Erin'), user)
 
     def test_spoiler_exists(self):
         test_spoiler = Spoiler(('test_spoiler_img', 0, None, 0))

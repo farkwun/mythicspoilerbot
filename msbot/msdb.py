@@ -33,8 +33,13 @@ class MSDatabase(Database):
         self.query(sql)
         return [ User(row) for row in self.fetchall() ]
 
-    def update_user(self, user_id, last_updated=None, last_spoiled=None):
-        if last_updated == None and last_spoiled == None:
+    def update_user(self,
+                    user_id,
+                    last_updated=None,
+                    last_spoiled=None,
+                    options=None
+    ):
+        if last_updated == None and last_spoiled == None and options == None:
             return
 
         update_strings = []
@@ -44,6 +49,17 @@ class MSDatabase(Database):
 
         if last_spoiled != None:
             update_strings.append('last_spoiled = {}'.format(last_spoiled))
+
+        if options != None:
+            sql = "SELECT options FROM users where id = '{}'".format(user_id)
+            self.query(sql)
+            (json_string,) = self.fetchone()
+            user_options = json.loads(json_string)
+            for key, value in options.items():
+                user_options[key] = value
+            update_strings.append(
+                "options = '{}'".format(json.dumps(user_options))
+            )
 
         update_string = ','.join(update_strings)
 
