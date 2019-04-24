@@ -28,8 +28,8 @@ def send_message(sender_psid, response):
 
     r = requests.post(msbot.constants.FB_MESSAGE_URL, params=params, json=request_body)
 
-def send_text_message(sender_psid, text):
-    send_message(sender_psid, { msbot.constants.TEXT: text})
+def to_text_response(text):
+    return { msbot.constants.TEXT: text }
 
 def create_quick_reply_button(payload):
     return {
@@ -38,15 +38,23 @@ def create_quick_reply_button(payload):
         msbot.constants.PAYLOAD: payload,
     }
 
-def send_update(sender_psid, text):
-    resp = {
+def text_quick_reply_response(text, buttons):
+    return {
         msbot.constants.TEXT: text,
-        msbot.constants.QUICK_REPLIES: [
-            create_quick_reply_button(msbot.constants.SEND),
-            create_quick_reply_button(msbot.constants.RECENT),
-        ]
+        msbot.constants.QUICK_REPLIES: buttons
     }
-    send_message(sender_psid, resp)
+
+# TODO: Refactor this to take in a user object and a last spoiled id
+# Also write a test for it
+UPDATE_BUTTONS = [
+    create_quick_reply_button(msbot.constants.SEND_CMD),
+    create_quick_reply_button(msbot.constants.RECENT_CMD),
+]
+def send_update(sender_psid, text):
+    send_message(
+        sender_psid,
+        text_quick_reply_response(text, UPDATE_BUTTONS)
+    )
 
 def get_attach_id_for(image_url):
     print('Getting attach id for ', image_url)
@@ -90,16 +98,37 @@ def update_spoilers():
     for spoiler, attach_id in attach_dict.items():
         db.add_spoiler(spoiler, attach_id)
 
-def update_users():
+def update_user(user):
     db = msbot.msdb.MSDatabase(db_file)
-    unnotified_users = db.get_all_unnotified_users()
     last_spoiler = db.get_latest_spoiler_id()
 
-    for user in unnotified_users:
+    def poll(user):
         num_spoilers = last_spoiler - user.last_spoiled
         resp = msbot.constants.RESP_UPDATE.format(num_spoilers=num_spoilers)
         send_update(user.user_id, resp)
-        db.update_user(user.user_id, last_updated=last_spoiler)
+
+    def asap(user):
+        handle_message(user.user_id, msbot.constants.SEND_CMD)
+
+    update_modes = {
+        msbot.constants.POLL_MODE_CMD: lambda user: poll(user),
+        msbot.constants.ASAP_MODE_CMD: lambda user: asap(user),
+    }
+
+    user_mode = user.options.update_mode
+
+    if user_mode in update_modes:
+        update_modes[user_mode](user)
+    else:
+        poll(user)
+
+    db.update_user(user.user_id, last_updated=last_spoiler)
+
+def update_users():
+    db = msbot.msdb.MSDatabase(db_file)
+    unnotified_users = db.get_all_unnotified_users()
+    for user in unnotified_users:
+        update_user(user)
 
 #send updates from MythicSpoiler every 10 minutes
 def update():
@@ -109,6 +138,10 @@ def update():
         update_users()
 
 #Handle messages received from user
+UPDATE_MODE_BUTTONS = [
+    create_quick_reply_button(msbot.constants.POLL_MODE_CMD),
+    create_quick_reply_button(msbot.constants.ASAP_MODE_CMD),
+]
 def handle_message(sender_psid, received_message):
     database = msbot.msdb.MSDatabase(db_file)
     def subscribe(sender_psid):
@@ -152,12 +185,44 @@ def handle_message(sender_psid, received_message):
             return msbot.constants.RESP_LAST_SPOILER_INFO.format(date_string=last_spoil_date)
         return msbot.constants.RESP_INVALID_UNSUBBED
 
+    def mode(sender_psid):
+        if database.user_exists(sender_psid):
+            user = database.get_user_from_id(sender_psid)
+            text = msbot.constants.RESP_MODE_PROMPT.format(
+                    update_mode=user.options.update_mode
+                )
+            return text_quick_reply_response(text, UPDATE_MODE_BUTTONS)
+        return to_text_response(msbot.constants.RESP_INVALID_UNSUBBED)
+
+    def change_update_mode(sender_psid, mode):
+        if database.user_exists(sender_psid):
+            database.update_user(
+                sender_psid,
+                options={
+                    msbot.constants.UPDATE_MODE: mode
+                }
+            )
+            return to_text_response(
+                msbot.constants.RESP_MODE_COMPLETE.format(update_mode=mode)
+            )
+        return to_text_response(msbot.constants.RESP_INVALID_UNSUBBED)
+
     responses = {
-        msbot.constants.HELLO: lambda id: subscribe(id),
-        msbot.constants.GOODBYE: lambda id: unsubscribe(id),
-        msbot.constants.SEND: lambda id: send(id),
-        msbot.constants.RECENT: lambda id: recent(id),
+        msbot.constants.HELLO_CMD: lambda id: to_text_response(subscribe(id)),
+        msbot.constants.GOODBYE_CMD: lambda id: to_text_response(unsubscribe(id)),
+        msbot.constants.SEND_CMD: lambda id: to_text_response(send(id)),
+        msbot.constants.RECENT_CMD: lambda id: to_text_response(recent(id)),
+        msbot.constants.MODE_CMD: lambda id: mode(id),
+        msbot.constants.POLL_MODE_CMD: lambda id: change_update_mode(
+            id,
+            msbot.constants.POLL_MODE_CMD
+        ),
+        msbot.constants.ASAP_MODE_CMD: lambda id: change_update_mode(
+            id,
+            msbot.constants.ASAP_MODE_CMD
+        ),
     }
+
     message = received_message.lower()
     if message in responses:
         resp = responses[message](sender_psid)
@@ -165,8 +230,9 @@ def handle_message(sender_psid, received_message):
         resp = msbot.constants.RESP_INVALID_UNSUBBED
         if database.user_exists(sender_psid):
             resp = msbot.constants.RESP_INVALID_SUBBED
+        resp = to_text_response(resp)
 
-    send_text_message(sender_psid, resp)
+    send_message(sender_psid, resp)
 
 def handle_postback(sender_psid, received_postback):
     pass
