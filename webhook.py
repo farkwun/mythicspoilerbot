@@ -251,7 +251,14 @@ def webhook_event():
             if event[msbot.constants.MESSAGE]:
                 try:
                     if sender_psid in msbot.settings.DEV_SAFELIST:
-                        handle_message(sender_psid, event[msbot.constants.MESSAGE][msbot.constants.TEXT])
+                        handle_thread = Thread(
+                            target = handle_message, args=(
+                                sender_psid,
+                                event[msbot.constants.MESSAGE][msbot.constants.TEXT]
+                            )
+                        )
+                        handle_thread.setDaemon(True)
+                        handle_thread.start()
                 except KeyError:
                     print('Non-text message received')
             elif event[msbot.constants.POSTBACK]:
