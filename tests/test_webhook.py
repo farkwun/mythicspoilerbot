@@ -33,6 +33,11 @@ class TestWebhook(unittest.TestCase):
         self.addCleanup(requests_patch.stop)
         self.requests_mock = requests_patch.start()
 
+        db_patch = mock.patch('msbot.msdb.MSDatabase')
+        self.addCleanup(db_patch.stop)
+        self.mock_db = db_patch.start()
+        self.db_mock = self.mock_db.return_value
+
     def test_send_message(self):
         mock_send_psid = 123456
         mock_message = 'Hello'
@@ -123,8 +128,7 @@ class TestWebhook(unittest.TestCase):
 
     @mock.patch('webhook.get_attach_id_for')
     @mock.patch('msbot.mslib.getLatestSpoilers')
-    @mock.patch('msbot.msdb.MSDatabase')
-    def test_update_spoilers(self, db_mock, spoils_mock, attach_mock):
+    def test_update_spoilers(self, spoils_mock, attach_mock):
         test_spoilers = {
             '1': {'exists': False, 'attach_id': '123'},
             '2': {'exists': False, 'attach_id': '456'},
@@ -137,8 +141,7 @@ class TestWebhook(unittest.TestCase):
         def get_attach_id_for_return_values(spoiler):
             return test_spoilers[spoiler]['attach_id']
 
-        db = db_mock.return_value
-        db.spoiler_exists.side_effect = spoiler_exists_return_values
+        self.db_mock.spoiler_exists.side_effect = spoiler_exists_return_values
 
         spoils_mock.return_value = [k for k in test_spoilers.keys()]
 
@@ -151,18 +154,16 @@ class TestWebhook(unittest.TestCase):
             mock.call('1', '123'),
         ]
 
-        db.add_spoiler.assert_has_calls(calls, any_order=True)
-        self.assertEqual(db.add_spoiler.call_count, len(calls))
+        self.db_mock.add_spoiler.assert_has_calls(calls, any_order=True)
+        self.assertEqual(self.db_mock.add_spoiler.call_count, len(calls))
 
-    @mock.patch('msbot.msdb.MSDatabase')
     @mock.patch('webhook.handle_message')
     @mock.patch('webhook.send_update')
-    def test_update_user(self, send_mock, handle_mock, db_mock):
-        db = db_mock.return_value
+    def test_update_user(self, send_mock, handle_mock):
 
         # default user
         alice = User(('Alice', 0, 0, '{}'))
-        db.get_latest_spoiler_id.return_value = 2
+        self.db_mock.get_latest_spoiler_id.return_value = 2
         webhook.update_user(alice)
         send_mock.assert_called_once_with(alice.user_id,
                                           msbot.constants.RESP_UPDATE
@@ -178,7 +179,7 @@ class TestWebhook(unittest.TestCase):
         # unsupported mode
         send_mock.reset_mock()
         alice = User(('Alice', 0, 0, '{}'))
-        db.get_latest_spoiler_id.return_value = 2
+        self.db_mock.get_latest_spoiler_id.return_value = 2
         alice.options.update_mode = 'UNSUPPORTED'
         webhook.update_user(alice)
         send_mock.assert_called_once_with(alice.user_id,
@@ -187,18 +188,16 @@ class TestWebhook(unittest.TestCase):
                                           )
 
 
-    @mock.patch('msbot.msdb.MSDatabase')
     @mock.patch('webhook.send_update')
-    def test_update_users(self, send_mock, db_mock):
-        db = db_mock.return_value
+    def test_update_users(self, send_mock):
 
         alice = User(('Alice', 0, 0, '{}'))
         bob = User(('Bob', 4, 1, '{}'))
         dan = User(('Dan', 3, 3, '{}'))
 
-        db.get_all_unnotified_users.return_value = [alice, bob]
+        self.db_mock.get_all_unnotified_users.return_value = [alice, bob]
 
-        db.get_latest_spoiler_id.return_value = 5
+        self.db_mock.get_latest_spoiler_id.return_value = 5
 
         calls = [
             mock.call(alice.user_id,
@@ -212,11 +211,9 @@ class TestWebhook(unittest.TestCase):
         send_mock.assert_has_calls(calls, any_order=True)
         self.assertEqual(send_mock.call_count, len(calls))
 
-    @mock.patch('msbot.msdb.MSDatabase')
     @mock.patch('webhook.send_message')
-    def test_handle_message_sub_when_unsubbed(self, send_mock, db_mock):
-        db = db_mock.return_value
-        db.user_exists.return_value = False
+    def test_handle_message_sub_when_unsubbed(self, send_mock):
+        self.db_mock.user_exists.return_value = False
         sender_psid = 1234
 
         webhook.handle_message(sender_psid, msbot.constants.HELLO_CMD)
@@ -224,11 +221,9 @@ class TestWebhook(unittest.TestCase):
             sender_psid,
             { msbot.constants.TEXT: msbot.constants.RESP_SUBBED })
 
-    @mock.patch('msbot.msdb.MSDatabase')
     @mock.patch('webhook.send_message')
-    def test_handle_message_sub_when_subbed(self, send_mock, db_mock):
-        db = db_mock.return_value
-        db.user_exists.return_value = True
+    def test_handle_message_sub_when_subbed(self, send_mock):
+        self.db_mock.user_exists.return_value = True
         sender_psid = 1234
 
         webhook.handle_message(sender_psid, msbot.constants.HELLO_CMD)
@@ -236,11 +231,9 @@ class TestWebhook(unittest.TestCase):
             sender_psid,
             { msbot.constants.TEXT: msbot.constants.RESP_ALREADY_SUBBED })
 
-    @mock.patch('msbot.msdb.MSDatabase')
     @mock.patch('webhook.send_message')
-    def test_handle_message_unsub_when_unsubbed(self, send_mock, db_mock):
-        db = db_mock.return_value
-        db.user_exists.return_value = False
+    def test_handle_message_unsub_when_unsubbed(self, send_mock):
+        self.db_mock.user_exists.return_value = False
         sender_psid = 1234
 
         webhook.handle_message(sender_psid, msbot.constants.GOODBYE_CMD)
@@ -248,11 +241,9 @@ class TestWebhook(unittest.TestCase):
             sender_psid,
             { msbot.constants.TEXT: msbot.constants.RESP_ALREADY_UNSUBBED })
 
-    @mock.patch('msbot.msdb.MSDatabase')
     @mock.patch('webhook.send_message')
-    def test_handle_message_send_when_unsubbed(self, send_mock, db_mock):
-        db = db_mock.return_value
-        db.user_exists.return_value = False
+    def test_handle_message_send_when_unsubbed(self, send_mock):
+        self.db_mock.user_exists.return_value = False
         sender_psid = 1234
 
         webhook.handle_message(sender_psid, msbot.constants.SEND_CMD)
@@ -263,20 +254,18 @@ class TestWebhook(unittest.TestCase):
             )
         )
 
-    @mock.patch('msbot.msdb.MSDatabase')
     @mock.patch('webhook.send_message')
     @mock.patch('webhook.send_spoiler_to')
-    def test_handle_message_send_when_subbed(self, spoil_mock, send_mock, db_mock):
+    def test_handle_message_send_when_subbed(self, spoil_mock, send_mock):
         alice = User(('Alice', 5, 5, '{}'))
         spoiler1 = Spoiler(('spoil1','attach1','2019-01-01',None))
         spoiler2 = Spoiler(('spoil2','attach2','2019-01-01',None))
         spoiler3 = Spoiler(('spoil3','attach3','2019-01-01',None))
-        db = db_mock.return_value
-        db.user_exists.return_value = True
-        db.get_user_from_id.return_value = User(('Alice', 5, 5, '{}'))
+        self.db_mock.user_exists.return_value = True
+        self.db_mock.get_user_from_id.return_value = User(('Alice', 5, 5, '{}'))
         latest_spoiler = 8
-        db.get_latest_spoiler_id.return_value = latest_spoiler
-        db.get_spoilers_later_than.return_value = []
+        self.db_mock.get_latest_spoiler_id.return_value = latest_spoiler
+        self.db_mock.get_spoilers_later_than.return_value = []
         sender_psid = 1234
 
         # no new spoilers
@@ -290,7 +279,7 @@ class TestWebhook(unittest.TestCase):
 
         # new spoilers
         send_mock.reset_mock()
-        db.get_spoilers_later_than.return_value = [
+        self.db_mock.get_spoilers_later_than.return_value = [
             spoiler1,
             spoiler2,
             spoiler3,
@@ -309,13 +298,11 @@ class TestWebhook(unittest.TestCase):
                 msbot.constants.RESP_UPDATE_COMPLETE
             )
         )
-        db.update_user.called_once_with(alice.user_id, latest_spoiler)
+        self.db_mock.update_user.called_once_with(alice.user_id, latest_spoiler)
 
-    @mock.patch('msbot.msdb.MSDatabase')
     @mock.patch('webhook.send_message')
-    def test_handle_message_recent_when_unsubbed(self, send_mock, db_mock):
-        db = db_mock.return_value
-        db.user_exists.return_value = False
+    def test_handle_message_recent_when_unsubbed(self, send_mock):
+        self.db_mock.user_exists.return_value = False
         sender_psid = 1234
 
         webhook.handle_message(sender_psid, msbot.constants.RECENT_CMD)
@@ -326,23 +313,21 @@ class TestWebhook(unittest.TestCase):
             )
         )
 
-    @mock.patch('msbot.msdb.MSDatabase')
     @mock.patch('webhook.send_message')
     @mock.patch('webhook.send_spoiler_to')
-    def test_handle_message_recent_when_subbed(self, spoil_mock, send_mock, db_mock):
+    def test_handle_message_recent_when_subbed(self, spoil_mock, send_mock):
         alice = User(('Alice', 8, 8, '{}'))
         latest_date = '2019-02-02'
         spoiler1 = Spoiler(('spoil1','attach1', latest_date, None))
         spoiler2 = Spoiler(('spoil2','attach2', latest_date, None))
 
-        db = db_mock.return_value
-        db.user_exists.return_value = True
-        db.get_user_from_id.return_value = User(('Alice', 8, 8, '{}'))
+        self.db_mock.user_exists.return_value = True
+        self.db_mock.get_user_from_id.return_value = User(('Alice', 8, 8, '{}'))
 
         latest_spoiler = 8
-        db.get_latest_spoiler_id.return_value = latest_spoiler
-        db.get_latest_spoiler_date.return_value = latest_date
-        db.get_all_spoilers_on_date.return_value = [
+        self.db_mock.get_latest_spoiler_id.return_value = latest_spoiler
+        self.db_mock.get_latest_spoiler_date.return_value = latest_date
+        self.db_mock.get_all_spoilers_on_date.return_value = [
             spoiler1,
             spoiler2,
         ]
@@ -364,16 +349,14 @@ class TestWebhook(unittest.TestCase):
                 msbot.constants.RESP_LAST_SPOILER_INFO.format(date_string=latest_date)
             )
         )
-        db.update_user.called_once_with(alice.user_id,
+        self.db_mock.update_user.called_once_with(alice.user_id,
                                         latest_spoiler,
                                         latest_spoiler
         )
 
-    @mock.patch('msbot.msdb.MSDatabase')
     @mock.patch('webhook.send_message')
-    def test_handle_message_mode_when_unsubbed(self, send_mock, db_mock):
-        db = db_mock.return_value
-        db.user_exists.return_value = False
+    def test_handle_message_mode_when_unsubbed(self, send_mock):
+        self.db_mock.user_exists.return_value = False
         sender_psid = 1234
 
         webhook.handle_message(sender_psid, msbot.constants.MODE_CMD)
@@ -382,14 +365,12 @@ class TestWebhook(unittest.TestCase):
             webhook.to_text_response(msbot.constants.RESP_INVALID_UNSUBBED)
         )
 
-    @mock.patch('msbot.msdb.MSDatabase')
     @mock.patch('webhook.send_message')
-    def test_handle_message_mode_when_subbed(self, send_mock, db_mock):
-        db = db_mock.return_value
-        db.user_exists.return_value = True
+    def test_handle_message_mode_when_subbed(self, send_mock):
+        self.db_mock.user_exists.return_value = True
         sender_psid = 1234
 
-        db.get_user_from_id.return_value = User(
+        self.db_mock.get_user_from_id.return_value = User(
             ('Alice',
              0,
              0,
@@ -416,15 +397,9 @@ class TestWebhook(unittest.TestCase):
             webhook.text_quick_reply_response(text, buttons)
         )
 
-    @mock.patch('msbot.msdb.MSDatabase')
     @mock.patch('webhook.send_message')
-    def test_handle_message_poll_when_unsubbed(
-        self,
-        send_mock,
-        db_mock
-    ):
-        db = db_mock.return_value
-        db.user_exists.return_value = False
+    def test_handle_message_poll_when_unsubbed(self, send_mock):
+        self.db_mock.user_exists.return_value = False
         sender_psid = 1234
 
         webhook.handle_message(sender_psid, msbot.constants.POLL_MODE_CMD)
@@ -433,19 +408,13 @@ class TestWebhook(unittest.TestCase):
             webhook.to_text_response(msbot.constants.RESP_INVALID_UNSUBBED)
         )
 
-    @mock.patch('msbot.msdb.MSDatabase')
     @mock.patch('webhook.send_message')
-    def test_handle_message_poll_when_subbed(
-        self,
-        send_mock,
-        db_mock
-    ):
-        db = db_mock.return_value
-        db.user_exists.return_value = True
+    def test_handle_message_poll_when_subbed(self, send_mock):
+        self.db_mock.user_exists.return_value = True
         sender_psid = 1234
 
         webhook.handle_message(sender_psid, msbot.constants.POLL_MODE_CMD)
-        db.update_user.called_once_with(
+        self.db_mock.update_user.called_once_with(
             sender_psid,
             options={
                 msbot.constants.UPDATE_MODE: msbot.constants.POLL_MODE_CMD
@@ -460,15 +429,9 @@ class TestWebhook(unittest.TestCase):
             )
         )
 
-    @mock.patch('msbot.msdb.MSDatabase')
     @mock.patch('webhook.send_message')
-    def test_handle_message_asap_when_unsubbed(
-        self,
-        send_mock,
-        db_mock
-    ):
-        db = db_mock.return_value
-        db.user_exists.return_value = False
+    def test_handle_message_asap_when_unsubbed(self, send_mock):
+        self.db_mock.user_exists.return_value = False
         sender_psid = 1234
 
         webhook.handle_message(sender_psid, msbot.constants.ASAP_MODE_CMD)
@@ -477,19 +440,13 @@ class TestWebhook(unittest.TestCase):
             webhook.to_text_response(msbot.constants.RESP_INVALID_UNSUBBED)
         )
 
-    @mock.patch('msbot.msdb.MSDatabase')
     @mock.patch('webhook.send_message')
-    def test_handle_message_asap_when_subbed(
-        self,
-        send_mock,
-        db_mock
-    ):
-        db = db_mock.return_value
-        db.user_exists.return_value = True
+    def test_handle_message_asap_when_subbed(self, send_mock):
+        self.db_mock.user_exists.return_value = True
         sender_psid = 1234
 
         webhook.handle_message(sender_psid, msbot.constants.ASAP_MODE_CMD)
-        db.update_user.called_once_with(
+        self.db_mock.update_user.called_once_with(
             sender_psid,
             options={
                 msbot.constants.UPDATE_MODE: msbot.constants.ASAP_MODE_CMD
@@ -504,13 +461,9 @@ class TestWebhook(unittest.TestCase):
             )
         )
 
-    @mock.patch('msbot.msdb.MSDatabase')
     @mock.patch('webhook.send_message')
-    def test_handle_message_unsub_when_subbed(self, send_mock, db_mock):
-        # TODO: This stuff below gets re-used so often
-        # we might as well have it as part of setup
-        db = db_mock.return_value
-        db.user_exists.return_value = True
+    def test_handle_message_unsub_when_subbed(self, send_mock):
+        self.db_mock.user_exists.return_value = True
         sender_psid = 1234
 
         webhook.handle_message(sender_psid, msbot.constants.GOODBYE_CMD)
@@ -518,11 +471,9 @@ class TestWebhook(unittest.TestCase):
             sender_psid,
             { msbot.constants.TEXT: msbot.constants.RESP_UNSUBBED })
 
-    @mock.patch('msbot.msdb.MSDatabase')
     @mock.patch('webhook.send_message')
-    def test_handle_message_invalid_when_subbed(self, send_mock, db_mock):
-        db = db_mock.return_value
-        db.user_exists.return_value = True
+    def test_handle_message_invalid_when_subbed(self, send_mock):
+        self.db_mock.user_exists.return_value = True
         sender_psid = 1234
 
         webhook.handle_message(sender_psid, 'unsupported_message')
@@ -533,11 +484,9 @@ class TestWebhook(unittest.TestCase):
             )
         )
 
-    @mock.patch('msbot.msdb.MSDatabase')
     @mock.patch('webhook.send_message')
-    def test_handle_message_invalid_when_unsubbed(self, send_mock, db_mock):
-        db = db_mock.return_value
-        db.user_exists.return_value = False
+    def test_handle_message_invalid_when_unsubbed(self, send_mock):
+        self.db_mock.user_exists.return_value = False
         sender_psid = 1234
 
         webhook.handle_message(sender_psid, 'unsupported_message')
