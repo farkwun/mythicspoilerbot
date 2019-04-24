@@ -46,12 +46,15 @@ def text_quick_reply_response(text, buttons):
 
 # TODO: Refactor this to take in a user object and a last spoiled id
 # Also write a test for it
+UPDATE_BUTTONS = [
+    create_quick_reply_button(msbot.constants.SEND_CMD),
+    create_quick_reply_button(msbot.constants.RECENT_CMD),
+]
 def send_update(sender_psid, text):
-    buttons = [
-        create_quick_reply_button(msbot.constants.SEND_CMD),
-        create_quick_reply_button(msbot.constants.RECENT_CMD),
-    ]
-    send_message(sender_psid, text_quick_reply_response(text, buttons))
+    send_message(
+        sender_psid,
+        text_quick_reply_response(text, UPDATE_BUTTONS)
+    )
 
 def get_attach_id_for(image_url):
     print('Getting attach id for ', image_url)
@@ -135,6 +138,10 @@ def update():
         update_users()
 
 #Handle messages received from user
+UPDATE_MODE_BUTTONS = [
+    create_quick_reply_button(msbot.constants.POLL_MODE_CMD),
+    create_quick_reply_button(msbot.constants.ASAP_MODE_CMD),
+]
 def handle_message(sender_psid, received_message):
     database = msbot.msdb.MSDatabase(db_file)
     def subscribe(sender_psid):
@@ -184,11 +191,7 @@ def handle_message(sender_psid, received_message):
             text = msbot.constants.RESP_MODE_PROMPT.format(
                     update_mode=user.options.update_mode
                 )
-            buttons = [
-                create_quick_reply_button(msbot.constants.POLL_MODE_CMD),
-                create_quick_reply_button(msbot.constants.ASAP_MODE_CMD),
-            ]
-            return text_quick_reply_response(text, buttons)
+            return text_quick_reply_response(text, UPDATE_MODE_BUTTONS)
         return to_text_response(msbot.constants.RESP_INVALID_UNSUBBED)
 
     def change_update_mode(sender_psid, mode):
