@@ -36,24 +36,24 @@ ASAP_MODE_CMD = 'asap'
 INFO_CMD = 'help'
 
 # Responses
-RESP_SUBBED = "You are now subscribed. Say '" + INFO_CMD + "' to get some information about me and a list of my commands, or just wait for spoilers to roll in :)"
+RESP_SUBBED = "You are now subscribed. Tap the '" + INFO_CMD.capitalize() + "' button (or type the command) to get some information about me and a list of my commands, or just wait for spoilers to roll in :)"
 RESP_UNSUBBED = 'You have been unsubscribed from MythicSpoilerBot'
 RESP_ALREADY_SUBBED = 'You are already subscribed'
 RESP_ALREADY_UNSUBBED = 'You are not subscribed'
-RESP_INVALID_UNSUBBED = "You are not subscribed. Say 'hello' at any time to subscribe"
-RESP_INVALID_SUBBED = "Invalid command. Say '" + INFO_CMD + "' to get a list of my supported commands"
+RESP_INVALID_UNSUBBED = "You are not subscribed. Tap the '" + HELLO_CMD.capitalize() + "' button (or type the command) at any time to subscribe"
+RESP_INVALID_SUBBED = "Invalid command. Tap the '" + INFO_CMD.capitalize() + "' button (or type the command) to get a list of my supported commands"
 RESP_UPDATE = (
     "New spoilers are out! You have {num_spoilers} unseen spoiler(s).\n\n"
-    "Choose the '" + SEND_CMD.capitalize() + "' or '" + RECENT_CMD.capitalize() +
+    "Tap the '" + SEND_CMD.capitalize() + "' or '" + RECENT_CMD.capitalize() +
     "' buttons below.\n\n" + SEND_CMD.capitalize() + " - Receive all unseen spoilers\n\n"
     + RECENT_CMD.capitalize() + " - Receive most recent spoilers and mark remaining as seen"
 )
 RESP_LAST_SPOILER_INFO = "These spoilers were released on {date_string} "
-RESP_UPDATE_UPDATED = 'No new spoilers :('
+RESP_UPDATE_UPDATED = "No new spoilers :(. Tap the '" + RECENT_CMD.capitalize() + "' button (or type the command) to get the most recent day of spoilers"
 RESP_UPDATE_COMPLETE = 'You are now up to date'
 RESP_MODE_PROMPT = (
     "Change your update mode! Your current update mode is '{update_mode}'.\n\n"
-    "Choose the '" + POLL_MODE_CMD.capitalize() + "' or '" + ASAP_MODE_CMD.capitalize() +
+    "Tap the '" + POLL_MODE_CMD.capitalize() + "' or '" + ASAP_MODE_CMD.capitalize() +
     "' buttons below.\n\n" + POLL_MODE_CMD.capitalize() + " - When new spoilers are "
     "available, I'll send a prompt so you can get spoilers at your pace\n\n"
     + ASAP_MODE_CMD.capitalize() + " - When new spoilers are available, I'll send you "
@@ -61,9 +61,9 @@ RESP_MODE_PROMPT = (
 )
 RESP_MODE_COMPLETE = "Your update mode is now '{update_mode}'"
 RESP_INFO_PROMPT = (
-    'Hi! Welcome to MSBot :D. Choose a button below (or type the command) to get started.\n\n'
+    'Hi! Welcome to MSBot :D. Tap a button below (or type the command) to get started.\n\n'
     "I support the following commands:\n\n"
-    + SEND_CMD.capitalize() + " - Receive all outstanding spoilers (you might not have any if you've just subscribed\n\n"
+    + SEND_CMD.capitalize() + " - Receive all outstanding spoilers (you might not have any if you've just subscribed)\n\n"
     + RECENT_CMD.capitalize() + " - Receive the most recent day of spoilers\n\n"
     + MODE_CMD.capitalize() + " - Change your update mode! The default mode prompts you when new spoilers are available so you can get them at your own pace\n\n"
     + GOODBYE_CMD.capitalize() + " - Unsubscribe from MSBot"

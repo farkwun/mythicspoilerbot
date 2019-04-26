@@ -217,9 +217,14 @@ class TestWebhook(unittest.TestCase):
         sender_psid = 1234
 
         webhook.handle_message(sender_psid, msbot.constants.HELLO_CMD)
+        self.db_mock.add_user.assert_called_once_with(sender_psid)
         send_mock.assert_called_once_with(
             sender_psid,
-            { msbot.constants.TEXT: msbot.constants.RESP_SUBBED })
+            webhook.text_quick_reply_response(
+                msbot.constants.RESP_SUBBED,
+                [ webhook.INFO_BUTTON ]
+            )
+        )
 
     @mock.patch('webhook.send_message')
     def test_handle_message_sub_when_subbed(self, send_mock):
@@ -229,7 +234,8 @@ class TestWebhook(unittest.TestCase):
         webhook.handle_message(sender_psid, msbot.constants.HELLO_CMD)
         send_mock.assert_called_once_with(
             sender_psid,
-            { msbot.constants.TEXT: msbot.constants.RESP_ALREADY_SUBBED })
+            webhook.to_text_response(msbot.constants.RESP_ALREADY_SUBBED)
+        )
 
     @mock.patch('webhook.send_message')
     def test_handle_message_unsub_when_unsubbed(self, send_mock):
@@ -239,7 +245,19 @@ class TestWebhook(unittest.TestCase):
         webhook.handle_message(sender_psid, msbot.constants.GOODBYE_CMD)
         send_mock.assert_called_once_with(
             sender_psid,
-            { msbot.constants.TEXT: msbot.constants.RESP_ALREADY_UNSUBBED })
+            webhook.to_text_response(msbot.constants.RESP_ALREADY_UNSUBBED)
+        )
+
+    @mock.patch('webhook.send_message')
+    def test_handle_message_unsub_when_subbed(self, send_mock):
+        self.db_mock.user_exists.return_value = True
+        sender_psid = 1234
+
+        webhook.handle_message(sender_psid, msbot.constants.GOODBYE_CMD)
+        send_mock.assert_called_once_with(
+            sender_psid,
+            webhook.to_text_response(msbot.constants.RESP_UNSUBBED)
+        )
 
     @mock.patch('webhook.send_message')
     def test_handle_message_send_when_unsubbed(self, send_mock):
@@ -249,9 +267,7 @@ class TestWebhook(unittest.TestCase):
         webhook.handle_message(sender_psid, msbot.constants.SEND_CMD)
         send_mock.assert_called_once_with(
             sender_psid,
-            webhook.to_text_response(
-                msbot.constants.RESP_INVALID_UNSUBBED
-            )
+            webhook.RESP_INVALID_CMD
         )
 
     @mock.patch('webhook.send_message')
@@ -272,8 +288,10 @@ class TestWebhook(unittest.TestCase):
         webhook.handle_message(sender_psid, msbot.constants.SEND_CMD)
         send_mock.assert_called_once_with(
             sender_psid,
-            webhook.to_text_response(
-                msbot.constants.RESP_UPDATE_UPDATED
+            webhook.text_quick_reply_response(
+                msbot.constants.RESP_UPDATE_UPDATED,
+                [ webhook.RECENT_BUTTON ]
+
             )
         )
 
@@ -308,9 +326,7 @@ class TestWebhook(unittest.TestCase):
         webhook.handle_message(sender_psid, msbot.constants.RECENT_CMD)
         send_mock.assert_called_once_with(
             sender_psid,
-            webhook.to_text_response(
-                msbot.constants.RESP_INVALID_UNSUBBED
-            )
+            webhook.RESP_INVALID_CMD
         )
 
     @mock.patch('webhook.send_message')
@@ -362,7 +378,7 @@ class TestWebhook(unittest.TestCase):
         webhook.handle_message(sender_psid, msbot.constants.MODE_CMD)
         send_mock.assert_called_once_with(
             sender_psid,
-            webhook.to_text_response(msbot.constants.RESP_INVALID_UNSUBBED)
+            webhook.RESP_INVALID_CMD
         )
 
     @mock.patch('webhook.send_message')
@@ -400,7 +416,7 @@ class TestWebhook(unittest.TestCase):
         webhook.handle_message(sender_psid, msbot.constants.POLL_MODE_CMD)
         send_mock.assert_called_once_with(
             sender_psid,
-            webhook.to_text_response(msbot.constants.RESP_INVALID_UNSUBBED)
+            webhook.RESP_INVALID_CMD
         )
 
     @mock.patch('webhook.send_message')
@@ -432,7 +448,7 @@ class TestWebhook(unittest.TestCase):
         webhook.handle_message(sender_psid, msbot.constants.ASAP_MODE_CMD)
         send_mock.assert_called_once_with(
             sender_psid,
-            webhook.to_text_response(msbot.constants.RESP_INVALID_UNSUBBED)
+            webhook.RESP_INVALID_CMD
         )
 
     @mock.patch('webhook.send_message')
@@ -464,7 +480,7 @@ class TestWebhook(unittest.TestCase):
         webhook.handle_message(sender_psid, msbot.constants.INFO_CMD)
         send_mock.assert_called_once_with(
             sender_psid,
-            webhook.to_text_response(msbot.constants.RESP_INVALID_UNSUBBED)
+            webhook.RESP_INVALID_CMD
         )
 
     @mock.patch('webhook.send_message')
@@ -482,16 +498,6 @@ class TestWebhook(unittest.TestCase):
         )
 
     @mock.patch('webhook.send_message')
-    def test_handle_message_unsub_when_subbed(self, send_mock):
-        self.db_mock.user_exists.return_value = True
-        sender_psid = 1234
-
-        webhook.handle_message(sender_psid, msbot.constants.GOODBYE_CMD)
-        send_mock.assert_called_once_with(
-            sender_psid,
-            { msbot.constants.TEXT: msbot.constants.RESP_UNSUBBED })
-
-    @mock.patch('webhook.send_message')
     def test_handle_message_invalid_when_subbed(self, send_mock):
         self.db_mock.user_exists.return_value = True
         sender_psid = 1234
@@ -499,8 +505,9 @@ class TestWebhook(unittest.TestCase):
         webhook.handle_message(sender_psid, 'unsupported_message')
         send_mock.assert_called_once_with(
             sender_psid,
-            webhook.to_text_response(
-                msbot.constants.RESP_INVALID_SUBBED
+            webhook.text_quick_reply_response(
+                msbot.constants.RESP_INVALID_SUBBED,
+                [ webhook.INFO_BUTTON ]
             )
         )
 
@@ -512,7 +519,7 @@ class TestWebhook(unittest.TestCase):
         webhook.handle_message(sender_psid, 'unsupported_message')
         send_mock.assert_called_once_with(
             sender_psid,
-            webhook.to_text_response(msbot.constants.RESP_INVALID_UNSUBBED)
+            webhook.RESP_INVALID_CMD
         )
 
     def test_webhook_event_text_message_received(self):
