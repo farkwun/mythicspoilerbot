@@ -138,17 +138,33 @@ def update():
         update_users()
 
 #Handle messages received from user
+INFO_BUTTON = create_quick_reply_button(msbot.constants.INFO_CMD)
+HELLO_BUTTON = create_quick_reply_button(msbot.constants.HELLO_CMD)
+RECENT_BUTTON = create_quick_reply_button(msbot.constants.RECENT_CMD)
 UPDATE_MODE_BUTTONS = [
     create_quick_reply_button(msbot.constants.POLL_MODE_CMD),
     create_quick_reply_button(msbot.constants.ASAP_MODE_CMD),
 ]
+INFO_PROMPT_BUTTONS = [
+    create_quick_reply_button(msbot.constants.SEND_CMD),
+    RECENT_BUTTON,
+    create_quick_reply_button(msbot.constants.MODE_CMD),
+    create_quick_reply_button(msbot.constants.GOODBYE_CMD),
+]
+RESP_INVALID_CMD = text_quick_reply_response(
+    msbot.constants.RESP_INVALID_UNSUBBED,
+    [ HELLO_BUTTON ]
+)
 def handle_message(sender_psid, received_message):
     database = msbot.msdb.MSDatabase(db_file)
     def subscribe(sender_psid):
-        if not database.user_exists(sender_psid):
-            database.add_user(sender_psid)
-            return msbot.constants.RESP_SUBBED
-        return msbot.constants.RESP_ALREADY_SUBBED
+        if database.user_exists(sender_psid):
+            return to_text_response(msbot.constants.RESP_ALREADY_SUBBED)
+        database.add_user(sender_psid)
+        return text_quick_reply_response(
+            msbot.constants.RESP_SUBBED,
+            [ INFO_BUTTON ]
+        )
 
     def unsubscribe(sender_psid):
         if database.user_exists(sender_psid):
@@ -162,12 +178,15 @@ def handle_message(sender_psid, received_message):
             last_spoiler = database.get_latest_spoiler_id()
             spoilers = database.get_spoilers_later_than(user.last_spoiled)
             if not spoilers:
-                return msbot.constants.RESP_UPDATE_UPDATED
+                return text_quick_reply_response(
+                    msbot.constants.RESP_UPDATE_UPDATED,
+                    [ RECENT_BUTTON ]
+                )
             for spoiler in spoilers:
                 send_spoiler_to(user, spoiler)
             database.update_user(user.user_id, last_spoiled=last_spoiler)
-            return msbot.constants.RESP_UPDATE_COMPLETE
-        return msbot.constants.RESP_INVALID_UNSUBBED
+            return to_text_response(msbot.constants.RESP_UPDATE_COMPLETE)
+        return RESP_INVALID_CMD
 
     def recent(sender_psid):
         if database.user_exists(sender_psid):
@@ -182,8 +201,12 @@ def handle_message(sender_psid, received_message):
                 last_updated=last_spoiler,
                 last_spoiled=last_spoiler
             )
-            return msbot.constants.RESP_LAST_SPOILER_INFO.format(date_string=last_spoil_date)
-        return msbot.constants.RESP_INVALID_UNSUBBED
+            return to_text_response(
+                msbot.constants.RESP_LAST_SPOILER_INFO.format(
+                    date_string=last_spoil_date
+                )
+            )
+        return RESP_INVALID_CMD
 
     def mode(sender_psid):
         if database.user_exists(sender_psid):
@@ -192,7 +215,7 @@ def handle_message(sender_psid, received_message):
                     update_mode=user.options.update_mode
                 )
             return text_quick_reply_response(text, UPDATE_MODE_BUTTONS)
-        return to_text_response(msbot.constants.RESP_INVALID_UNSUBBED)
+        return RESP_INVALID_CMD
 
     def change_update_mode(sender_psid, mode):
         if database.user_exists(sender_psid):
@@ -205,13 +228,21 @@ def handle_message(sender_psid, received_message):
             return to_text_response(
                 msbot.constants.RESP_MODE_COMPLETE.format(update_mode=mode)
             )
-        return to_text_response(msbot.constants.RESP_INVALID_UNSUBBED)
+        return RESP_INVALID_CMD
+
+    def info(sender_psid):
+        if database.user_exists(sender_psid):
+            return text_quick_reply_response(
+                msbot.constants.RESP_INFO_PROMPT,
+                INFO_PROMPT_BUTTONS
+            )
+        return RESP_INVALID_CMD
 
     responses = {
-        msbot.constants.HELLO_CMD: lambda id: to_text_response(subscribe(id)),
+        msbot.constants.HELLO_CMD: lambda id: subscribe(id),
         msbot.constants.GOODBYE_CMD: lambda id: to_text_response(unsubscribe(id)),
-        msbot.constants.SEND_CMD: lambda id: to_text_response(send(id)),
-        msbot.constants.RECENT_CMD: lambda id: to_text_response(recent(id)),
+        msbot.constants.SEND_CMD: lambda id: send(id),
+        msbot.constants.RECENT_CMD: lambda id: recent(id),
         msbot.constants.MODE_CMD: lambda id: mode(id),
         msbot.constants.POLL_MODE_CMD: lambda id: change_update_mode(
             id,
@@ -221,16 +252,19 @@ def handle_message(sender_psid, received_message):
             id,
             msbot.constants.ASAP_MODE_CMD
         ),
+        msbot.constants.INFO_CMD: lambda id: info(id),
     }
 
     message = received_message.lower()
     if message in responses:
         resp = responses[message](sender_psid)
     else:
-        resp = msbot.constants.RESP_INVALID_UNSUBBED
+        resp = RESP_INVALID_CMD
         if database.user_exists(sender_psid):
-            resp = msbot.constants.RESP_INVALID_SUBBED
-        resp = to_text_response(resp)
+            resp = text_quick_reply_response(
+                msbot.constants.RESP_INVALID_SUBBED,
+                [ INFO_BUTTON ]
+            )
 
     send_message(sender_psid, resp)
 
