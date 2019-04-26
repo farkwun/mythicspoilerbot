@@ -142,13 +142,19 @@ UPDATE_MODE_BUTTONS = [
     create_quick_reply_button(msbot.constants.POLL_MODE_CMD),
     create_quick_reply_button(msbot.constants.ASAP_MODE_CMD),
 ]
+INFO_PROMPT_BUTTONS = [
+    create_quick_reply_button(msbot.constants.SEND_CMD),
+    create_quick_reply_button(msbot.constants.RECENT_CMD),
+    create_quick_reply_button(msbot.constants.MODE_CMD),
+    create_quick_reply_button(msbot.constants.GOODBYE_CMD),
+]
 def handle_message(sender_psid, received_message):
     database = msbot.msdb.MSDatabase(db_file)
     def subscribe(sender_psid):
-        if not database.user_exists(sender_psid):
+        if database.user_exists(sender_psid):
             database.add_user(sender_psid)
-            return msbot.constants.RESP_SUBBED
-        return msbot.constants.RESP_ALREADY_SUBBED
+            return msbot.constants.RESP_ALREADY_SUBBED
+        return msbot.constants.RESP_SUBBED
 
     def unsubscribe(sender_psid):
         if database.user_exists(sender_psid):
@@ -207,6 +213,14 @@ def handle_message(sender_psid, received_message):
             )
         return to_text_response(msbot.constants.RESP_INVALID_UNSUBBED)
 
+    def info(sender_psid):
+        if database.user_exists(sender_psid):
+            return text_quick_reply_response(
+                msbot.constants.RESP_INFO_PROMPT,
+                INFO_PROMPT_BUTTONS
+            )
+        return to_text_response(msbot.constants.RESP_INVALID_UNSUBBED)
+
     responses = {
         msbot.constants.HELLO_CMD: lambda id: to_text_response(subscribe(id)),
         msbot.constants.GOODBYE_CMD: lambda id: to_text_response(unsubscribe(id)),
@@ -221,6 +235,7 @@ def handle_message(sender_psid, received_message):
             id,
             msbot.constants.ASAP_MODE_CMD
         ),
+        msbot.constants.INFO_CMD: lambda id: info(id),
     }
 
     message = received_message.lower()

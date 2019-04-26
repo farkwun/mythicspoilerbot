@@ -386,15 +386,10 @@ class TestWebhook(unittest.TestCase):
             update_mode = msbot.constants.POLL_MODE_CMD
         )
 
-        buttons = [
-            webhook.create_quick_reply_button(msbot.constants.POLL_MODE_CMD),
-            webhook.create_quick_reply_button(msbot.constants.ASAP_MODE_CMD),
-        ]
-
         webhook.handle_message(sender_psid, msbot.constants.MODE_CMD)
         send_mock.assert_called_once_with(
             sender_psid,
-            webhook.text_quick_reply_response(text, buttons)
+            webhook.text_quick_reply_response(text, webhook.UPDATE_MODE_BUTTONS)
         )
 
     @mock.patch('webhook.send_message')
@@ -458,6 +453,31 @@ class TestWebhook(unittest.TestCase):
                 msbot.constants.RESP_MODE_COMPLETE.format(
                     update_mode=msbot.constants.ASAP_MODE_CMD
                 )
+            )
+        )
+
+    @mock.patch('webhook.send_message')
+    def test_handle_message_info_when_unsubbed(self, send_mock):
+        self.db_mock.user_exists.return_value = False
+        sender_psid = 1234
+
+        webhook.handle_message(sender_psid, msbot.constants.INFO_CMD)
+        send_mock.assert_called_once_with(
+            sender_psid,
+            webhook.to_text_response(msbot.constants.RESP_INVALID_UNSUBBED)
+        )
+
+    @mock.patch('webhook.send_message')
+    def test_handle_message_info_when_subbed(self, send_mock):
+        self.db_mock.user_exists.return_value = True
+        sender_psid = 1234
+
+        webhook.handle_message(sender_psid, msbot.constants.INFO_CMD)
+        send_mock.assert_called_once_with(
+            sender_psid,
+            webhook.text_quick_reply_response(
+                msbot.constants.RESP_INFO_PROMPT,
+                webhook.INFO_PROMPT_BUTTONS
             )
         )
 
