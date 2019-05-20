@@ -522,6 +522,32 @@ class TestWebhook(unittest.TestCase):
             webhook.RESP_INVALID_CMD
         )
 
+    def test_is_allowed_psid_dev_mode_on(self):
+        self.settings_mock.configure_mock(
+            **{
+                'DEV_MODE': False,
+                'DEV_SAFELIST': {},
+            }
+        )
+        self.assertTrue(webhook.is_allowed_psid('1234'))
+
+    def test_is_allowed_psid_dev_mode_off(self):
+        self.settings_mock.configure_mock(
+            **{
+                'DEV_MODE': True,
+                'DEV_SAFELIST': {},
+            }
+        )
+        self.assertFalse(webhook.is_allowed_psid('1234'))
+
+        self.settings_mock.configure_mock(
+            **{
+                'DEV_MODE': True,
+                'DEV_SAFELIST': {'1234'},
+            }
+        )
+        self.assertTrue(webhook.is_allowed_psid('1234'))
+
     def test_webhook_event_text_message_received(self):
         with boddle(
             body=json.dumps(
