@@ -522,7 +522,7 @@ class TestWebhook(unittest.TestCase):
             webhook.RESP_INVALID_CMD
         )
 
-    def test_is_allowed_psid_dev_mode_on(self):
+    def test_is_allowed_psid_dev_mode_off(self):
         self.settings_mock.configure_mock(
             **{
                 'DEV_MODE': False,
@@ -531,7 +531,7 @@ class TestWebhook(unittest.TestCase):
         )
         self.assertTrue(webhook.is_allowed_psid('1234'))
 
-    def test_is_allowed_psid_dev_mode_off(self):
+    def test_is_allowed_psid_dev_mode_on(self):
         self.settings_mock.configure_mock(
             **{
                 'DEV_MODE': True,
