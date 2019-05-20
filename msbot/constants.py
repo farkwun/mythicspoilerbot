@@ -45,8 +45,8 @@ RESP_INVALID_SUBBED = "Invalid command. Tap the '" + INFO_CMD.capitalize() + "' 
 RESP_UPDATE = (
     "New spoilers are out! You have {num_spoilers} unseen spoiler(s).\n\n"
     "Tap the '" + SEND_CMD.capitalize() + "' or '" + RECENT_CMD.capitalize() +
-    "' buttons below.\n\n" + SEND_CMD.capitalize() + " - Receive all unseen spoilers\n\n"
-    + RECENT_CMD.capitalize() + " - Receive most recent spoilers and mark remaining as seen"
+    "' buttons below.\n\n" + SEND_CMD.capitalize() + " - Receive all your unseen spoilers\n\n"
+    + RECENT_CMD.capitalize() + " - Receive the most recent day of spoilers and mark any unseen spoilers from before that date as seen"
 )
 RESP_LAST_SPOILER_INFO = "These spoilers were released on {date_string} "
 RESP_UPDATE_UPDATED = "No new spoilers :(. Tap the '" + RECENT_CMD.capitalize() + "' button (or type the command) to get the most recent day of spoilers"
