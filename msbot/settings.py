@@ -9,3 +9,5 @@ TEST_DB_LOCATION = 'db/test_msbot_tables.db'
 
 DEV_SAFELIST = {
 }
+
+DEV_MODE = False

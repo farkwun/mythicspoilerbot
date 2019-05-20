@@ -271,6 +271,12 @@ def handle_message(sender_psid, received_message):
 def handle_postback(sender_psid, received_postback):
     pass
 
+def is_allowed_psid(sender_psid):
+    return (
+        not msbot.settings.DEV_MODE or
+        (msbot.settings.DEV_MODE and sender_psid in msbot.settings.DEV_SAFELIST)
+    )
+
 @route('/webhook', method='POST')
 def webhook_event():
     print('event received')
@@ -284,7 +290,7 @@ def webhook_event():
 
             if event[msbot.constants.MESSAGE]:
                 try:
-                    if sender_psid in msbot.settings.DEV_SAFELIST:
+                    if is_allowed_psid(sender_psid):
                         handle_thread = Thread(
                             target = handle_message, args=(
                                 sender_psid,
