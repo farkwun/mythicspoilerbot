@@ -28,7 +28,7 @@ UPDATE_MODE = 'update_mode'
 # Commands
 HELLO_CMD = 'hello'
 GOODBYE_CMD = 'goodbye'
-SEND_CMD = 'all'
+SEND_CMD = 'unseen'
 RECENT_CMD = 'recent'
 MODE_CMD = 'mode'
 POLL_MODE_CMD = 'poll'
