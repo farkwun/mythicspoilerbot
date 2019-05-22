@@ -193,10 +193,19 @@ class TestWebhook(unittest.TestCase):
 
         alice = User(('Alice', 0, 0, '{}'))
         bob = User(('Bob', 4, 1, '{}'))
-        dan = User(('Dan', 3, 3, '{}'))
+        dan = User(('Dan', 5, 5, '{}'))
 
-        self.db_mock.get_all_unnotified_users.return_value = [alice, bob]
+        users = {
+            'Alice': alice,
+            'Bob': bob,
+            'Dan': dan,
+        }
 
+        def get_user_from_id_return_values(user_id):
+            return users[user_id]
+
+        self.db_mock.get_all_unnotified_users.return_value = [alice, bob, dan]
+        self.db_mock.get_user_from_id.side_effect = get_user_from_id_return_values
         self.db_mock.get_latest_spoiler_id.return_value = 5
 
         calls = [
@@ -316,7 +325,11 @@ class TestWebhook(unittest.TestCase):
                 msbot.constants.RESP_UPDATE_COMPLETE
             )
         )
-        self.db_mock.update_user.called_once_with(alice.user_id, latest_spoiler)
+        self.db_mock.update_user.assert_called_once_with(
+            alice.user_id,
+            last_updated=latest_spoiler,
+            last_spoiled=latest_spoiler
+        )
 
     @mock.patch('webhook.send_message')
     def test_handle_message_recent_when_unsubbed(self, send_mock):
@@ -365,9 +378,10 @@ class TestWebhook(unittest.TestCase):
                 msbot.constants.RESP_LAST_SPOILER_INFO.format(date_string=latest_date)
             )
         )
-        self.db_mock.update_user.called_once_with(alice.user_id,
-                                        latest_spoiler,
-                                        latest_spoiler
+        self.db_mock.update_user.assert_called_once_with(
+            alice.user_id,
+            last_updated=latest_spoiler,
+            last_spoiled=latest_spoiler
         )
 
     @mock.patch('webhook.send_message')
@@ -425,7 +439,7 @@ class TestWebhook(unittest.TestCase):
         sender_psid = 1234
 
         webhook.handle_message(sender_psid, msbot.constants.POLL_MODE_CMD)
-        self.db_mock.update_user.called_once_with(
+        self.db_mock.update_user.assert_called_once_with(
             sender_psid,
             options={
                 msbot.constants.UPDATE_MODE: msbot.constants.POLL_MODE_CMD
@@ -457,7 +471,7 @@ class TestWebhook(unittest.TestCase):
         sender_psid = 1234
 
         webhook.handle_message(sender_psid, msbot.constants.ASAP_MODE_CMD)
-        self.db_mock.update_user.called_once_with(
+        self.db_mock.update_user.assert_called_once_with(
             sender_psid,
             options={
                 msbot.constants.UPDATE_MODE: msbot.constants.ASAP_MODE_CMD

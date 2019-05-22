@@ -128,7 +128,8 @@ def update_users():
     db = msbot.msdb.MSDatabase(db_file)
     unnotified_users = db.get_all_unnotified_users()
     for user in unnotified_users:
-        update_user(user)
+        if db.get_user_from_id(user.user_id).last_updated < db.get_latest_spoiler_id():
+            update_user(user)
 
 #send updates from MythicSpoiler every 10 minutes
 def update():
@@ -184,7 +185,11 @@ def handle_message(sender_psid, received_message):
                 )
             for spoiler in spoilers:
                 send_spoiler_to(user, spoiler)
-            database.update_user(user.user_id, last_spoiled=last_spoiler)
+            database.update_user(
+                user.user_id,
+                last_updated=last_spoiler,
+                last_spoiled=last_spoiler
+            )
             return to_text_response(msbot.constants.RESP_UPDATE_COMPLETE)
         return RESP_INVALID_CMD
 
