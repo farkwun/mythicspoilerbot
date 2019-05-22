@@ -24,6 +24,7 @@ CONTENT_TYPE = 'content_type'
 TITLE = 'title'
 PAYLOAD = 'payload'
 UPDATE_MODE = 'update_mode'
+DUPLICATES = 'duplicates'
 
 # Commands
 HELLO_CMD = 'hello'
