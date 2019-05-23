@@ -25,7 +25,7 @@ class UserOptions:
     def default_options():
         return {
             msbot.constants.UPDATE_MODE: msbot.constants.POLL_MODE_CMD,
-            msbot.constants.DUPLICATES: True,
+            msbot.constants.DUPLICATES: False,
         }
 
     def to_json(self):

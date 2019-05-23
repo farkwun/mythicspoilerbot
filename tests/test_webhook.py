@@ -244,7 +244,10 @@ class TestWebhook(unittest.TestCase):
         ]
 
         # poll user duplicates on
-        alice = User(('Alice', 0, 0, '{}'))
+        options_dict = {
+            msbot.constants.DUPLICATES: True
+        }
+        alice = User(('Alice', 0, 0, json.dumps(options_dict)))
         self.db_mock.get_latest_spoiler_id.return_value = 2
         webhook.update_user(alice)
         send_update_mock.assert_called_once_with(
@@ -362,9 +365,12 @@ class TestWebhook(unittest.TestCase):
         )
 
         # unsupported mode
-        self.db_mock.update_user.reset_mock()
         send_update_mock.reset_mock()
-        alice = User(('Alice', 0, 0, '{}'))
+        self.db_mock.update_user.reset_mock()
+        options_dict = {
+            msbot.constants.DUPLICATES: True
+        }
+        alice = User(('Alice', 0, 0, json.dumps(options_dict)))
         self.db_mock.get_latest_spoiler_id.return_value = 2
         alice.options.update_mode = 'UNSUPPORTED'
         webhook.update_user(alice)
@@ -471,9 +477,9 @@ class TestWebhook(unittest.TestCase):
     @mock.patch('webhook.send_spoiler_to')
     def test_handle_message_send_when_subbed(self, spoil_mock, send_mock):
         alice = User(('Alice', 5, 5, '{}'))
-        spoiler1 = Spoiler(('spoil1','attach1','2019-01-01',None))
-        spoiler2 = Spoiler(('spoil2','attach2','2019-01-01',None))
-        spoiler3 = Spoiler(('spoil3','attach3','2019-01-01',None))
+        spoiler1 = Spoiler(('spoila','attach1','2019-01-01',None))
+        spoiler2 = Spoiler(('spoilb','attach2','2019-01-01',None))
+        spoiler3 = Spoiler(('spoilc','attach3','2019-01-01',None))
         self.db_mock.user_exists.return_value = True
         self.db_mock.get_user_from_id.return_value = User(('Alice', 5, 5, '{}'))
         latest_spoiler = 8
