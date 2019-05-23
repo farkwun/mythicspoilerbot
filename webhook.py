@@ -290,7 +290,8 @@ def handle_message(sender_psid, received_message):
                     duplicate_status = (
                         msbot.constants.ON if user.options.duplicates
                         else msbot.constants.OFF
-                    )
+                    ),
+                    update_mode = user.options.update_mode
                 ),
                 OPTIONS_PROMPT_BUTTONS
             )

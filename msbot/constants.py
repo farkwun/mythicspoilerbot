@@ -68,11 +68,13 @@ RESP_MODE_PROMPT = (
 RESP_MODE_COMPLETE = "Your update mode is now '{update_mode}'"
 RESP_DUPLICATE_TOGGLE_COMPLETE = "Duplicates are now '{duplicate_status}'"
 RESP_OPTIONS_PROMPT = (
-    'Welcome to your user options! Tap a button below (or type the command)'
+    'Welcome to your user options! Tap a button below (or type the command) '
     'to start editing your options \n\n'
     'Here are the option commands:\n\n'
     + MODE_CMD.capitalize() + " - Change your update mode! The default mode prompts you when new spoilers are available so you can get them at your own pace\n\n"
-    + DUPLICATES_CMD.capitalize() + " - Toggle duplicates! As spoilers are released, higher-quality and/or translated duplicate images are released as new spoilers. If this setting is " + ON + ", you will receive all new spoilers whether or not they're duplicates. If this setting is " + OFF + ", you will only receive unique spoilers even if a higher-quality or newly-translated duplicate becomes available. You currently have duplicates {duplicate_status}."
+    + DUPLICATES_CMD.capitalize() + " - Toggle duplicates! As spoilers are released, higher-quality and/or translated duplicate images are released as new spoilers. If this setting is " + ON + ", you will receive all new spoilers whether or not they're duplicates. If this setting is " + OFF + ", you will only receive unique spoilers even if a higher-quality or newly-translated duplicate becomes available.\n\n"
+    "Your current update mode is '{update_mode}'\n"
+    "You currently have duplicates '{duplicate_status}'\n"
 )
 RESP_INFO_PROMPT = (
     'Hi! Welcome to MSBot :D. Tap a button below (or type the command) to get started.\n\n'

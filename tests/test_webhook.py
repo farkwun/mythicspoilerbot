@@ -813,7 +813,8 @@ class TestWebhook(unittest.TestCase):
             sender_psid,
             webhook.text_quick_reply_response(
                 msbot.constants.RESP_OPTIONS_PROMPT.format(
-                    duplicate_status=msbot.constants.OFF
+                    duplicate_status=msbot.constants.OFF,
+                    update_mode=msbot.constants.POLL_MODE_CMD
                 ),
                 webhook.OPTIONS_PROMPT_BUTTONS
             )
@@ -834,7 +835,8 @@ class TestWebhook(unittest.TestCase):
             sender_psid,
             webhook.text_quick_reply_response(
                 msbot.constants.RESP_OPTIONS_PROMPT.format(
-                    duplicate_status=msbot.constants.ON
+                    duplicate_status=msbot.constants.ON,
+                    update_mode=msbot.constants.POLL_MODE_CMD
                 ),
                 webhook.OPTIONS_PROMPT_BUTTONS
             )
