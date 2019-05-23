@@ -81,6 +81,6 @@ RESP_INFO_PROMPT = (
     "I support the following commands:\n\n"
     + SEND_CMD.capitalize() + " - Receive all outstanding spoilers (you might not have any if you've just subscribed)\n\n"
     + RECENT_CMD.capitalize() + " - Receive the most recent day of spoilers\n\n"
-    + MODE_CMD.capitalize() + " - Change your update mode! The default mode prompts you when new spoilers are available so you can get them at your own pace\n\n"
+    + OPTIONS_CMD.capitalize() + " - Access your user options! Change your update mode or your duplicates toggle\n\n"
     + GOODBYE_CMD.capitalize() + " - Unsubscribe from MSBot"
 )
