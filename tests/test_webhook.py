@@ -10,6 +10,7 @@ import webhook
 import msbot.constants
 from msbot.spoiler import Spoiler
 from msbot.user import User
+from msbot.user_options import UserOptions
 
 TEST_ACCESS_TOKEN = 'TEST_ACCESS_TOKEN'
 TEST_VERIFY_TOKEN = 'TEST_VERIFY_TOKEN'
@@ -98,6 +99,78 @@ class TestWebhook(unittest.TestCase):
             }
         )
 
+    def test_is_spoiler_allowed_by_options_duplicates_on(self):
+        options_dict = {
+            msbot.constants.DUPLICATES: True
+        }
+        options = UserOptions(json.dumps(options_dict))
+
+        # normal image url
+        test_spoiler = Spoiler(('image.jpg', 123456, '2019-01-01', None))
+        self.assertTrue(webhook.is_spoiler_allowed_by_options(test_spoiler, options))
+
+        # duplicate image url
+        test_spoiler = Spoiler(('image1.jpg', 123456, '2019-01-01', None))
+        self.assertTrue(webhook.is_spoiler_allowed_by_options(test_spoiler, options))
+
+    def test_is_spoiler_allowed_by_options_duplicates_off(self):
+        options_dict = {
+            msbot.constants.DUPLICATES: False
+        }
+        options = UserOptions(json.dumps(options_dict))
+
+        # normal image url
+        test_spoiler = Spoiler(('image.jpg', 123456, '2019-01-01', None))
+        self.assertTrue(webhook.is_spoiler_allowed_by_options(test_spoiler, options))
+
+        # duplicate image url
+        test_spoiler = Spoiler(('image1.jpg', 123456, '2019-01-01', None))
+        self.assertFalse(webhook.is_spoiler_allowed_by_options(test_spoiler, options))
+
+    def test_filter_spoilers_by_user_duplicates_on(self):
+        options_dict = {
+            msbot.constants.DUPLICATES: True
+        }
+        options_json = json.dumps(options_dict)
+        test_user = User((1234, 0, 0, options_json))
+
+        spoilers = [
+            Spoiler(('test.jpg', 1, '2019-01-01', None)),
+            Spoiler(('test1.jpg', 2, '2019-01-01', None)),
+            Spoiler(('test2.jpg', 3, '2019-01-01', None)),
+            Spoiler(('other.jpg', 4, '2019-01-01', None)),
+        ]
+
+        self.assertCountEqual(
+            spoilers,
+            webhook.filter_spoilers_by_user(spoilers, test_user)
+        )
+
+    def test_filter_spoilers_by_user_duplicates_off(self):
+        options_dict = {
+            msbot.constants.DUPLICATES: False
+        }
+        options_json = json.dumps(options_dict)
+        test_user = User((1234, 0, 0, options_json))
+
+        spoilers = [
+            Spoiler(('test.jpg', 1, '2019-01-01', None)),
+            Spoiler(('test1.jpg', 2, '2019-01-01', None)),
+            Spoiler(('test2.jpg', 3, '2019-01-01', None)),
+            Spoiler(('other.jpg', 4, '2019-01-01', None)),
+        ]
+
+        filtered_spoilers = [
+            Spoiler(('test.jpg', 1, '2019-01-01', None)),
+            Spoiler(('other.jpg', 4, '2019-01-01', None)),
+        ]
+
+        self.assertCountEqual(
+            filtered_spoilers,
+            webhook.filter_spoilers_by_user(spoilers, test_user)
+        )
+
+
     def test_get_attach_id_for(self):
         test_url = 'www.fake.com'
         attach_id = 123456
@@ -157,39 +230,162 @@ class TestWebhook(unittest.TestCase):
         self.db_mock.add_spoiler.assert_has_calls(calls, any_order=True)
         self.assertEqual(self.db_mock.add_spoiler.call_count, len(calls))
 
-    @mock.patch('webhook.handle_message')
+    # TODO: Split this test case into multiple test cases
+    @mock.patch('webhook.send_spoiler_to')
     @mock.patch('webhook.send_update')
-    def test_update_user(self, send_mock, handle_mock):
+    def test_update_user(self, send_update_mock, send_spoiler_mock):
+        spoil1 = Spoiler(('one.jpg','attach1','2019-01-01',None))
+        spoil2 = Spoiler(('one1.jpg','attach2','2019-01-01',None))
+        spoil3 = Spoiler(('one2.jpg','attach2','2019-01-01',None))
 
-        # default user
-        alice = User(('Alice', 0, 0, '{}'))
+        self.db_mock.get_spoilers_later_than.return_value = [
+            spoil1,
+            spoil2,
+        ]
+
+        # poll user duplicates on
+        options_dict = {
+            msbot.constants.DUPLICATES: True
+        }
+        alice = User(('Alice', 0, 0, json.dumps(options_dict)))
         self.db_mock.get_latest_spoiler_id.return_value = 2
         webhook.update_user(alice)
-        send_mock.assert_called_once_with(alice.user_id,
-                                          msbot.constants.RESP_UPDATE
-                                          .format(num_spoilers=2)
-                                          )
+        send_update_mock.assert_called_once_with(
+            alice.user_id,
+            msbot.constants.RESP_UPDATE.format(num_spoilers=2)
+        )
+        self.db_mock.update_user.assert_called_once_with(
+            alice.user_id,
+            last_updated=2
+        )
 
-        # asap user
+        # poll user duplicates off
+        send_update_mock.reset_mock()
+        self.db_mock.update_user.reset_mock()
+        options_dict = {
+            msbot.constants.DUPLICATES: False
+        }
+        alice = User(('Alice', 0, 0, json.dumps(options_dict)))
+        self.db_mock.get_latest_spoiler_id.return_value = 2
+        webhook.update_user(alice)
+        send_update_mock.assert_called_once_with(
+            alice.user_id,
+            msbot.constants.RESP_UPDATE.format(num_spoilers=1)
+        )
+        self.db_mock.update_user.assert_called_once_with(
+            alice.user_id,
+            last_updated=2
+        )
+
+        # poll user duplicates off spoilers all duplicates
+        send_update_mock.reset_mock()
+        self.db_mock.update_user.reset_mock()
+        self.db_mock.get_spoilers_later_than.return_value = [
+            spoil2,
+            spoil3
+        ]
+        options_dict = {
+            msbot.constants.DUPLICATES: False
+        }
+        alice = User(('Alice', 0, 0, json.dumps(options_dict)))
+        self.db_mock.get_latest_spoiler_id.return_value = 2
+        webhook.update_user(alice)
+        send_update_mock.assert_not_called()
+        self.db_mock.update_user.assert_called_once_with(
+            alice.user_id,
+            last_updated=2
+        )
+
+        # asap user duplicates on
+        self.db_mock.update_user.reset_mock()
+        self.db_mock.get_spoilers_later_than.return_value = [
+            spoil1,
+            spoil2,
+        ]
+        options_dict = {
+            msbot.constants.DUPLICATES: True
+        }
+        alice = User(('Alice', 0, 0, json.dumps(options_dict)))
         alice.options.update_mode = msbot.constants.ASAP_MODE_CMD
         webhook.update_user(alice)
-        handle_mock.assert_called_once_with(alice.user_id,
-                                            msbot.constants.SEND_CMD)
+        calls = [
+            mock.call(alice, spoil1),
+            mock.call(alice, spoil2),
+        ]
+        send_spoiler_mock.assert_has_calls(calls, any_order=True)
+        self.assertEqual(send_spoiler_mock.call_count, len(calls))
+        self.db_mock.update_user.assert_called_once_with(
+            alice.user_id,
+            last_spoiled=2,
+            last_updated=2
+        )
+
+        # asap user duplicates off
+        self.db_mock.update_user.reset_mock()
+        send_spoiler_mock.reset_mock()
+        self.db_mock.get_spoilers_later_than.return_value = [
+            spoil1,
+            spoil2,
+        ]
+        options_dict = {
+            msbot.constants.DUPLICATES: False
+        }
+        alice = User(('Alice', 0, 0, json.dumps(options_dict)))
+        alice.options.update_mode = msbot.constants.ASAP_MODE_CMD
+        webhook.update_user(alice)
+        calls = [
+            mock.call(alice, spoil1),
+        ]
+        send_spoiler_mock.assert_has_calls(calls, any_order=True)
+        self.assertEqual(send_spoiler_mock.call_count, len(calls))
+        self.db_mock.update_user.assert_called_once_with(
+            alice.user_id,
+            last_spoiled=2,
+            last_updated=2
+        )
+
+        # asap user duplicates off spoilers all duplicates
+        self.db_mock.update_user.reset_mock()
+        send_spoiler_mock.reset_mock()
+        self.db_mock.get_spoilers_later_than.return_value = [
+            spoil2,
+            spoil3,
+        ]
+        options_dict = {
+            msbot.constants.DUPLICATES: False
+        }
+        alice = User(('Alice', 0, 0, json.dumps(options_dict)))
+        alice.options.update_mode = msbot.constants.ASAP_MODE_CMD
+        webhook.update_user(alice)
+        send_spoiler_mock.assert_not_called()
+        self.db_mock.update_user.assert_called_once_with(
+            alice.user_id,
+            last_spoiled=2,
+            last_updated=2
+        )
 
         # unsupported mode
-        send_mock.reset_mock()
-        alice = User(('Alice', 0, 0, '{}'))
+        send_update_mock.reset_mock()
+        self.db_mock.update_user.reset_mock()
+        options_dict = {
+            msbot.constants.DUPLICATES: True
+        }
+        alice = User(('Alice', 0, 0, json.dumps(options_dict)))
         self.db_mock.get_latest_spoiler_id.return_value = 2
         alice.options.update_mode = 'UNSUPPORTED'
         webhook.update_user(alice)
-        send_mock.assert_called_once_with(alice.user_id,
-                                          msbot.constants.RESP_UPDATE
-                                          .format(num_spoilers=2)
-                                          )
+        send_update_mock.assert_called_once_with(
+            alice.user_id,
+            msbot.constants.RESP_UPDATE.format(num_spoilers=2)
+        )
+        self.db_mock.update_user.assert_called_once_with(
+            alice.user_id,
+            last_updated=2
+        )
 
 
-    @mock.patch('webhook.send_update')
-    def test_update_users(self, send_mock):
+    @mock.patch('webhook.update_user')
+    def test_update_users(self, update_mock):
 
         alice = User(('Alice', 0, 0, '{}'))
         bob = User(('Bob', 4, 1, '{}'))
@@ -209,16 +405,14 @@ class TestWebhook(unittest.TestCase):
         self.db_mock.get_latest_spoiler_id.return_value = 5
 
         calls = [
-            mock.call(alice.user_id,
-                      msbot.constants.RESP_UPDATE.format(num_spoilers=5)),
-            mock.call(bob.user_id,
-                      msbot.constants.RESP_UPDATE.format(num_spoilers=4)),
+            mock.call(alice),
+            mock.call(bob)
         ]
 
         webhook.update_users()
 
-        send_mock.assert_has_calls(calls, any_order=True)
-        self.assertEqual(send_mock.call_count, len(calls))
+        update_mock.assert_has_calls(calls, any_order=True)
+        self.assertEqual(update_mock.call_count, len(calls))
 
     @mock.patch('webhook.send_message')
     def test_handle_message_sub_when_unsubbed(self, send_mock):
@@ -283,9 +477,9 @@ class TestWebhook(unittest.TestCase):
     @mock.patch('webhook.send_spoiler_to')
     def test_handle_message_send_when_subbed(self, spoil_mock, send_mock):
         alice = User(('Alice', 5, 5, '{}'))
-        spoiler1 = Spoiler(('spoil1','attach1','2019-01-01',None))
-        spoiler2 = Spoiler(('spoil2','attach2','2019-01-01',None))
-        spoiler3 = Spoiler(('spoil3','attach3','2019-01-01',None))
+        spoiler1 = Spoiler(('spoila','attach1','2019-01-01',None))
+        spoiler2 = Spoiler(('spoilb','attach2','2019-01-01',None))
+        spoiler3 = Spoiler(('spoilc','attach3','2019-01-01',None))
         self.db_mock.user_exists.return_value = True
         self.db_mock.get_user_from_id.return_value = User(('Alice', 5, 5, '{}'))
         latest_spoiler = 8
@@ -423,6 +617,90 @@ class TestWebhook(unittest.TestCase):
         )
 
     @mock.patch('webhook.send_message')
+    def test_handle_message_duplicate_when_unsubbed(self, send_mock):
+        self.db_mock.user_exists.return_value = False
+        sender_psid = 1234
+
+        webhook.handle_message(sender_psid, msbot.constants.DUPLICATES_CMD)
+        send_mock.assert_called_once_with(
+            sender_psid,
+            webhook.RESP_INVALID_CMD
+        )
+
+    @mock.patch('webhook.send_message')
+    def test_handle_message_duplicate_when_subbed_toggles_true(self, send_mock):
+        self.db_mock.user_exists.return_value = True
+        sender_psid = 1234
+
+        self.db_mock.get_user_from_id.return_value = User(
+            ('Alice',
+             0,
+             0,
+             json.dumps(
+                 {
+                     msbot.constants.DUPLICATES: True
+                 }
+             )
+            )
+        )
+
+        text = msbot.constants.RESP_DUPLICATE_TOGGLE_COMPLETE.format(
+            duplicate_status=msbot.constants.OFF
+        )
+
+        webhook.handle_message(sender_psid, msbot.constants.DUPLICATES_CMD)
+        self.db_mock.update_user.assert_called_once_with(
+            sender_psid,
+            options={
+                msbot.constants.DUPLICATES: False
+            }
+        )
+        send_mock.assert_called_once_with(
+            sender_psid,
+            webhook.to_text_response(
+                msbot.constants.RESP_DUPLICATE_TOGGLE_COMPLETE.format(
+                    duplicate_status=msbot.constants.OFF
+                )
+            )
+        )
+    @mock.patch('webhook.send_message')
+    def test_handle_message_duplicate_when_subbed_toggles_false(self, send_mock):
+        self.db_mock.user_exists.return_value = True
+        sender_psid = 1234
+
+        self.db_mock.get_user_from_id.return_value = User(
+            ('Alice',
+             0,
+             0,
+             json.dumps(
+                 {
+                     msbot.constants.DUPLICATES: False
+                 }
+             )
+            )
+        )
+
+        text = msbot.constants.RESP_DUPLICATE_TOGGLE_COMPLETE.format(
+            duplicate_status=msbot.constants.ON
+        )
+
+        webhook.handle_message(sender_psid, msbot.constants.DUPLICATES_CMD)
+        self.db_mock.update_user.assert_called_once_with(
+            sender_psid,
+            options={
+                msbot.constants.DUPLICATES: True
+            }
+        )
+        send_mock.assert_called_once_with(
+            sender_psid,
+            webhook.to_text_response(
+                msbot.constants.RESP_DUPLICATE_TOGGLE_COMPLETE.format(
+                    duplicate_status=msbot.constants.ON
+                )
+            )
+        )
+
+    @mock.patch('webhook.send_message')
     def test_handle_message_poll_when_unsubbed(self, send_mock):
         self.db_mock.user_exists.return_value = False
         sender_psid = 1234
@@ -483,6 +761,82 @@ class TestWebhook(unittest.TestCase):
                 msbot.constants.RESP_MODE_COMPLETE.format(
                     update_mode=msbot.constants.ASAP_MODE_CMD
                 )
+            )
+        )
+
+    @mock.patch('webhook.send_message')
+    def test_handle_message_options_when_unsubbed(self, send_mock):
+        self.db_mock.user_exists.return_value = False
+        sender_psid = 1234
+
+        webhook.handle_message(sender_psid, msbot.constants.OPTIONS_CMD)
+        send_mock.assert_called_once_with(
+            sender_psid,
+            webhook.RESP_INVALID_CMD
+        )
+
+    @mock.patch('webhook.send_message')
+    def test_handle_message_options_when_subbed_duplicates_on(self, send_mock):
+        self.db_mock.user_exists.return_value = True
+        options_dict = {
+            msbot.constants.DUPLICATES: True
+        }
+        sender_psid = 1234
+        self.db_mock.get_user_from_id.return_value = User(
+            (sender_psid, 0, 0, json.dumps(options_dict))
+        )
+
+        webhook.handle_message(sender_psid, msbot.constants.OPTIONS_CMD)
+        send_mock.assert_called_once_with(
+            sender_psid,
+            webhook.text_quick_reply_response(
+                msbot.constants.RESP_OPTIONS_PROMPT.format(
+                    duplicate_status=msbot.constants.ON
+                ),
+                webhook.OPTIONS_PROMPT_BUTTONS
+            )
+        )
+
+    @mock.patch('webhook.send_message')
+    def test_handle_message_options_when_subbed_duplicates_off(self, send_mock):
+        self.db_mock.user_exists.return_value = True
+        options_dict = {
+            msbot.constants.DUPLICATES: False
+        }
+        sender_psid = 1234
+        self.db_mock.get_user_from_id.return_value = User(
+            (sender_psid, 0, 0, json.dumps(options_dict))
+        )
+
+        webhook.handle_message(sender_psid, msbot.constants.OPTIONS_CMD)
+        send_mock.assert_called_once_with(
+            sender_psid,
+            webhook.text_quick_reply_response(
+                msbot.constants.RESP_OPTIONS_PROMPT.format(
+                    duplicate_status=msbot.constants.OFF
+                ),
+                webhook.OPTIONS_PROMPT_BUTTONS
+            )
+        )
+    @mock.patch('webhook.send_message')
+    def test_handle_message_options_when_subbed_duplicates_on(self, send_mock):
+        self.db_mock.user_exists.return_value = True
+        options_dict = {
+            msbot.constants.DUPLICATES: True
+        }
+        sender_psid = 1234
+        self.db_mock.get_user_from_id.return_value = User(
+            (sender_psid, 0, 0, json.dumps(options_dict))
+        )
+
+        webhook.handle_message(sender_psid, msbot.constants.OPTIONS_CMD)
+        send_mock.assert_called_once_with(
+            sender_psid,
+            webhook.text_quick_reply_response(
+                msbot.constants.RESP_OPTIONS_PROMPT.format(
+                    duplicate_status=msbot.constants.ON
+                ),
+                webhook.OPTIONS_PROMPT_BUTTONS
             )
         )
 

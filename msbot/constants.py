@@ -24,6 +24,10 @@ CONTENT_TYPE = 'content_type'
 TITLE = 'title'
 PAYLOAD = 'payload'
 UPDATE_MODE = 'update_mode'
+DUPLICATES = 'duplicates'
+
+ON = 'ON'
+OFF = 'OFF'
 
 # Commands
 HELLO_CMD = 'hello'
@@ -34,6 +38,8 @@ MODE_CMD = 'mode'
 POLL_MODE_CMD = 'poll'
 ASAP_MODE_CMD = 'asap'
 INFO_CMD = 'help'
+OPTIONS_CMD = 'options'
+DUPLICATES_CMD = 'duplicates'
 
 # Responses
 RESP_SUBBED = "You are now subscribed. Tap the '" + INFO_CMD.capitalize() + "' button (or type the command) to get some information about me and a list of my commands, or just wait for spoilers to roll in :)"
@@ -60,6 +66,14 @@ RESP_MODE_PROMPT = (
     "the spoilers as soon as I get them so you can get spoilers ASAP"
 )
 RESP_MODE_COMPLETE = "Your update mode is now '{update_mode}'"
+RESP_DUPLICATE_TOGGLE_COMPLETE = "Duplicates are now '{duplicate_status}'"
+RESP_OPTIONS_PROMPT = (
+    'Welcome to your user options! Tap a button below (or type the command)'
+    'to start editing your options \n\n'
+    'Here are the option commands:\n\n'
+    + MODE_CMD.capitalize() + " - Change your update mode! The default mode prompts you when new spoilers are available so you can get them at your own pace\n\n"
+    + DUPLICATES_CMD.capitalize() + " - Toggle duplicates! As spoilers are released, higher-quality and/or translated duplicate images are released as new spoilers. If this setting is " + ON + ", you will receive all new spoilers whether or not they're duplicates. If this setting is " + OFF + ", you will only receive unique spoilers even if a higher-quality or newly-translated duplicate becomes available. You currently have duplicates {duplicate_status}."
+)
 RESP_INFO_PROMPT = (
     'Hi! Welcome to MSBot :D. Tap a button below (or type the command) to get started.\n\n'
     "I support the following commands:\n\n"

@@ -44,6 +44,22 @@ def text_quick_reply_response(text, buttons):
         msbot.constants.QUICK_REPLIES: buttons
     }
 
+def is_spoiler_allowed_by_options(spoiler, options):
+    return (
+        (
+            options.duplicates or
+            (not options.duplicates and not any(c.isdigit() for c in spoiler.image_url))
+        )
+    )
+
+def filter_spoilers_by_user(spoilers, user):
+    return [ s for s in spoilers if is_spoiler_allowed_by_options(s, user.options) ]
+
+def get_spoilers_for_user(user):
+    db = msbot.msdb.MSDatabase(db_file)
+    spoilers = db.get_spoilers_later_than(user.last_spoiled)
+    return filter_spoilers_by_user(spoilers, user)
+
 # TODO: Refactor this to take in a user object and a last spoiled id
 # Also write a test for it
 UPDATE_BUTTONS = [
@@ -101,14 +117,22 @@ def update_spoilers():
 def update_user(user):
     db = msbot.msdb.MSDatabase(db_file)
     last_spoiler = db.get_latest_spoiler_id()
+    spoilers = get_spoilers_for_user(user)
 
     def poll(user):
-        num_spoilers = last_spoiler - user.last_spoiled
-        resp = msbot.constants.RESP_UPDATE.format(num_spoilers=num_spoilers)
-        send_update(user.user_id, resp)
+        if spoilers:
+            resp = msbot.constants.RESP_UPDATE.format(num_spoilers=len(spoilers))
+            send_update(user.user_id, resp)
+        db.update_user(user.user_id, last_updated=last_spoiler)
 
     def asap(user):
-        handle_message(user.user_id, msbot.constants.SEND_CMD)
+        for spoiler in spoilers:
+            send_spoiler_to(user, spoiler)
+        db.update_user(
+            user.user_id,
+            last_updated=last_spoiler,
+            last_spoiled=last_spoiler,
+        )
 
     update_modes = {
         msbot.constants.POLL_MODE_CMD: lambda user: poll(user),
@@ -121,8 +145,6 @@ def update_user(user):
         update_modes[user_mode](user)
     else:
         poll(user)
-
-    db.update_user(user.user_id, last_updated=last_spoiler)
 
 def update_users():
     db = msbot.msdb.MSDatabase(db_file)
@@ -142,6 +164,7 @@ def update():
 INFO_BUTTON = create_quick_reply_button(msbot.constants.INFO_CMD)
 HELLO_BUTTON = create_quick_reply_button(msbot.constants.HELLO_CMD)
 RECENT_BUTTON = create_quick_reply_button(msbot.constants.RECENT_CMD)
+MODE_BUTTON = create_quick_reply_button(msbot.constants.MODE_CMD)
 UPDATE_MODE_BUTTONS = [
     create_quick_reply_button(msbot.constants.POLL_MODE_CMD),
     create_quick_reply_button(msbot.constants.ASAP_MODE_CMD),
@@ -149,8 +172,12 @@ UPDATE_MODE_BUTTONS = [
 INFO_PROMPT_BUTTONS = [
     create_quick_reply_button(msbot.constants.SEND_CMD),
     RECENT_BUTTON,
-    create_quick_reply_button(msbot.constants.MODE_CMD),
+    MODE_BUTTON,
     create_quick_reply_button(msbot.constants.GOODBYE_CMD),
+]
+OPTIONS_PROMPT_BUTTONS = [
+    MODE_BUTTON,
+    create_quick_reply_button(msbot.constants.DUPLICATES_CMD),
 ]
 RESP_INVALID_CMD = text_quick_reply_response(
     msbot.constants.RESP_INVALID_UNSUBBED,
@@ -177,7 +204,7 @@ def handle_message(sender_psid, received_message):
         if database.user_exists(sender_psid):
             user = database.get_user_from_id(sender_psid)
             last_spoiler = database.get_latest_spoiler_id()
-            spoilers = database.get_spoilers_later_than(user.last_spoiled)
+            spoilers = get_spoilers_for_user(user)
             if not spoilers:
                 return text_quick_reply_response(
                     msbot.constants.RESP_UPDATE_UPDATED,
@@ -235,6 +262,40 @@ def handle_message(sender_psid, received_message):
             )
         return RESP_INVALID_CMD
 
+    def toggle_duplicates(sender_psid):
+        if database.user_exists(sender_psid):
+            user = database.get_user_from_id(sender_psid)
+            database.update_user(
+                sender_psid,
+                options={
+                    msbot.constants.DUPLICATES: not user.options.duplicates
+                }
+            )
+            return to_text_response(
+                msbot.constants.RESP_DUPLICATE_TOGGLE_COMPLETE.format(
+                    duplicate_status=(
+                        msbot.constants.ON
+                        if not user.options.duplicates
+                        else msbot.constants.OFF
+                    )
+                )
+            )
+        return RESP_INVALID_CMD
+
+    def options(sender_psid):
+        if database.user_exists(sender_psid):
+            user = database.get_user_from_id(sender_psid)
+            return text_quick_reply_response(
+                msbot.constants.RESP_OPTIONS_PROMPT.format(
+                    duplicate_status = (
+                        msbot.constants.ON if user.options.duplicates
+                        else msbot.constants.OFF
+                    )
+                ),
+                OPTIONS_PROMPT_BUTTONS
+            )
+        return RESP_INVALID_CMD
+
     def info(sender_psid):
         if database.user_exists(sender_psid):
             return text_quick_reply_response(
@@ -257,6 +318,8 @@ def handle_message(sender_psid, received_message):
             id,
             msbot.constants.ASAP_MODE_CMD
         ),
+        msbot.constants.DUPLICATES_CMD: lambda id: toggle_duplicates(id),
+        msbot.constants.OPTIONS_CMD: lambda id: options(id),
         msbot.constants.INFO_CMD: lambda id: info(id),
     }
 

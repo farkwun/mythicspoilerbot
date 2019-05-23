@@ -6,26 +6,42 @@ class UserOptions:
         options = json.loads(json_string)
         if not options:
             options = self.default_options()
-        self.update_mode = options[msbot.constants.UPDATE_MODE]
+        self.set_update_mode(options)
+        self.set_duplicates(options)
+
+    def set_update_mode(self, options):
+        if msbot.constants.UPDATE_MODE in options:
+            self.update_mode = options[msbot.constants.UPDATE_MODE]
+        else:
+            self.update_mode = self.default_options()[msbot.constants.UPDATE_MODE]
+
+    def set_duplicates(self, options):
+        if msbot.constants.DUPLICATES in options:
+            self.duplicates = options[msbot.constants.DUPLICATES]
+        else:
+            self.duplicates = self.default_options()[msbot.constants.DUPLICATES]
 
     @staticmethod
     def default_options():
         return {
-            msbot.constants.UPDATE_MODE: msbot.constants.POLL_MODE_CMD
+            msbot.constants.UPDATE_MODE: msbot.constants.POLL_MODE_CMD,
+            msbot.constants.DUPLICATES: False,
         }
 
     def to_json(self):
         return {
-            msbot.constants.UPDATE_MODE: self.update_mode
+            msbot.constants.UPDATE_MODE: self.update_mode,
+            msbot.constants.DUPLICATES: self.duplicates,
         }
 
     def to_json_string(self):
         return json.dumps(self.to_json())
 
     def __repr__(self):
-        return ("<UserOptions object - update_mode: {update_mode}>"
+        return ("<UserOptions object - update_mode: {update_mode}, duplicates: {duplicates}>"
                 .format(
-                    update_mode=self.update_mode
+                    update_mode=self.update_mode,
+                    duplicates=self.duplicates,
                 )
         )
 
