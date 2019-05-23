@@ -759,6 +759,82 @@ class TestWebhook(unittest.TestCase):
         )
 
     @mock.patch('webhook.send_message')
+    def test_handle_message_options_when_unsubbed(self, send_mock):
+        self.db_mock.user_exists.return_value = False
+        sender_psid = 1234
+
+        webhook.handle_message(sender_psid, msbot.constants.OPTIONS_CMD)
+        send_mock.assert_called_once_with(
+            sender_psid,
+            webhook.RESP_INVALID_CMD
+        )
+
+    @mock.patch('webhook.send_message')
+    def test_handle_message_options_when_subbed_duplicates_on(self, send_mock):
+        self.db_mock.user_exists.return_value = True
+        options_dict = {
+            msbot.constants.DUPLICATES: True
+        }
+        sender_psid = 1234
+        self.db_mock.get_user_from_id.return_value = User(
+            (sender_psid, 0, 0, json.dumps(options_dict))
+        )
+
+        webhook.handle_message(sender_psid, msbot.constants.OPTIONS_CMD)
+        send_mock.assert_called_once_with(
+            sender_psid,
+            webhook.text_quick_reply_response(
+                msbot.constants.RESP_OPTIONS_PROMPT.format(
+                    duplicate_status=msbot.constants.ON
+                ),
+                webhook.OPTIONS_PROMPT_BUTTONS
+            )
+        )
+
+    @mock.patch('webhook.send_message')
+    def test_handle_message_options_when_subbed_duplicates_off(self, send_mock):
+        self.db_mock.user_exists.return_value = True
+        options_dict = {
+            msbot.constants.DUPLICATES: False
+        }
+        sender_psid = 1234
+        self.db_mock.get_user_from_id.return_value = User(
+            (sender_psid, 0, 0, json.dumps(options_dict))
+        )
+
+        webhook.handle_message(sender_psid, msbot.constants.OPTIONS_CMD)
+        send_mock.assert_called_once_with(
+            sender_psid,
+            webhook.text_quick_reply_response(
+                msbot.constants.RESP_OPTIONS_PROMPT.format(
+                    duplicate_status=msbot.constants.OFF
+                ),
+                webhook.OPTIONS_PROMPT_BUTTONS
+            )
+        )
+    @mock.patch('webhook.send_message')
+    def test_handle_message_options_when_subbed_duplicates_on(self, send_mock):
+        self.db_mock.user_exists.return_value = True
+        options_dict = {
+            msbot.constants.DUPLICATES: True
+        }
+        sender_psid = 1234
+        self.db_mock.get_user_from_id.return_value = User(
+            (sender_psid, 0, 0, json.dumps(options_dict))
+        )
+
+        webhook.handle_message(sender_psid, msbot.constants.OPTIONS_CMD)
+        send_mock.assert_called_once_with(
+            sender_psid,
+            webhook.text_quick_reply_response(
+                msbot.constants.RESP_OPTIONS_PROMPT.format(
+                    duplicate_status=msbot.constants.ON
+                ),
+                webhook.OPTIONS_PROMPT_BUTTONS
+            )
+        )
+
+    @mock.patch('webhook.send_message')
     def test_handle_message_info_when_unsubbed(self, send_mock):
         self.db_mock.user_exists.return_value = False
         sender_psid = 1234

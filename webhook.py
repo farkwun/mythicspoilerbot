@@ -164,6 +164,7 @@ def update():
 INFO_BUTTON = create_quick_reply_button(msbot.constants.INFO_CMD)
 HELLO_BUTTON = create_quick_reply_button(msbot.constants.HELLO_CMD)
 RECENT_BUTTON = create_quick_reply_button(msbot.constants.RECENT_CMD)
+MODE_BUTTON = create_quick_reply_button(msbot.constants.MODE_CMD)
 UPDATE_MODE_BUTTONS = [
     create_quick_reply_button(msbot.constants.POLL_MODE_CMD),
     create_quick_reply_button(msbot.constants.ASAP_MODE_CMD),
@@ -171,8 +172,12 @@ UPDATE_MODE_BUTTONS = [
 INFO_PROMPT_BUTTONS = [
     create_quick_reply_button(msbot.constants.SEND_CMD),
     RECENT_BUTTON,
-    create_quick_reply_button(msbot.constants.MODE_CMD),
+    MODE_BUTTON,
     create_quick_reply_button(msbot.constants.GOODBYE_CMD),
+]
+OPTIONS_PROMPT_BUTTONS = [
+    MODE_BUTTON,
+    create_quick_reply_button(msbot.constants.DUPLICATES_CMD),
 ]
 RESP_INVALID_CMD = text_quick_reply_response(
     msbot.constants.RESP_INVALID_UNSUBBED,
@@ -277,6 +282,20 @@ def handle_message(sender_psid, received_message):
             )
         return RESP_INVALID_CMD
 
+    def options(sender_psid):
+        if database.user_exists(sender_psid):
+            user = database.get_user_from_id(sender_psid)
+            return text_quick_reply_response(
+                msbot.constants.RESP_OPTIONS_PROMPT.format(
+                    duplicate_status = (
+                        msbot.constants.ON if user.options.duplicates
+                        else msbot.constants.OFF
+                    )
+                ),
+                OPTIONS_PROMPT_BUTTONS
+            )
+        return RESP_INVALID_CMD
+
     def info(sender_psid):
         if database.user_exists(sender_psid):
             return text_quick_reply_response(
@@ -300,6 +319,7 @@ def handle_message(sender_psid, received_message):
             msbot.constants.ASAP_MODE_CMD
         ),
         msbot.constants.DUPLICATES_CMD: lambda id: toggle_duplicates(id),
+        msbot.constants.OPTIONS_CMD: lambda id: options(id),
         msbot.constants.INFO_CMD: lambda id: info(id),
     }
 
