@@ -55,6 +55,11 @@ def is_spoiler_allowed_by_options(spoiler, options):
 def filter_spoilers_by_user(spoilers, user):
     return [ s for s in spoilers if is_spoiler_allowed_by_options(s, user.options) ]
 
+def get_spoilers_for_user(user):
+    db = msbot.msdb.MSDatabase(db_file)
+    spoilers = db.get_spoilers_later_than(user.last_spoiled)
+    return filter_spoilers_by_user(spoilers, user)
+
 # TODO: Refactor this to take in a user object and a last spoiled id
 # Also write a test for it
 UPDATE_BUTTONS = [
@@ -112,16 +117,22 @@ def update_spoilers():
 def update_user(user):
     db = msbot.msdb.MSDatabase(db_file)
     last_spoiler = db.get_latest_spoiler_id()
+    spoilers = get_spoilers_for_user(user)
 
     def poll(user):
-        spoilers = db.get_spoilers_later_than(user.last_spoiled)
-        spoilers = filter_spoilers_by_user(spoilers, user)
         if spoilers:
             resp = msbot.constants.RESP_UPDATE.format(num_spoilers=len(spoilers))
             send_update(user.user_id, resp)
+        db.update_user(user.user_id, last_updated=last_spoiler)
 
     def asap(user):
-        handle_message(user.user_id, msbot.constants.SEND_CMD)
+        for spoiler in spoilers:
+            send_spoiler_to(user, spoiler)
+        db.update_user(
+            user.user_id,
+            last_updated=last_spoiler,
+            last_spoiled=last_spoiler,
+        )
 
     update_modes = {
         msbot.constants.POLL_MODE_CMD: lambda user: poll(user),
@@ -134,8 +145,6 @@ def update_user(user):
         update_modes[user_mode](user)
     else:
         poll(user)
-
-    db.update_user(user.user_id, last_updated=last_spoiler)
 
 def update_users():
     db = msbot.msdb.MSDatabase(db_file)
@@ -190,7 +199,7 @@ def handle_message(sender_psid, received_message):
         if database.user_exists(sender_psid):
             user = database.get_user_from_id(sender_psid)
             last_spoiler = database.get_latest_spoiler_id()
-            spoilers = database.get_spoilers_later_than(user.last_spoiled)
+            spoilers = get_spoilers_for_user(user)
             if not spoilers:
                 return text_quick_reply_response(
                     msbot.constants.RESP_UPDATE_UPDATED,

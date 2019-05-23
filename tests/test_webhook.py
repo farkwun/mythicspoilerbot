@@ -230,68 +230,151 @@ class TestWebhook(unittest.TestCase):
         self.db_mock.add_spoiler.assert_has_calls(calls, any_order=True)
         self.assertEqual(self.db_mock.add_spoiler.call_count, len(calls))
 
-    @mock.patch('webhook.handle_message')
+    # TODO: Split this test case into multiple test cases
+    @mock.patch('webhook.send_spoiler_to')
     @mock.patch('webhook.send_update')
-    def test_update_user(self, send_mock, handle_mock):
+    def test_update_user(self, send_update_mock, send_spoiler_mock):
+        spoil1 = Spoiler(('one.jpg','attach1','2019-01-01',None))
+        spoil2 = Spoiler(('one1.jpg','attach2','2019-01-01',None))
+        spoil3 = Spoiler(('one2.jpg','attach2','2019-01-01',None))
 
         self.db_mock.get_spoilers_later_than.return_value = [
-            Spoiler(('one.jpg','attach1','2019-01-01',None)),
-            Spoiler(('one1.jpg','attach2','2019-01-01',None)),
+            spoil1,
+            spoil2,
         ]
 
         # poll user duplicates on
         alice = User(('Alice', 0, 0, '{}'))
         self.db_mock.get_latest_spoiler_id.return_value = 2
         webhook.update_user(alice)
-        send_mock.assert_called_once_with(
+        send_update_mock.assert_called_once_with(
             alice.user_id,
             msbot.constants.RESP_UPDATE.format(num_spoilers=2)
         )
+        self.db_mock.update_user.assert_called_once_with(
+            alice.user_id,
+            last_updated=2
+        )
 
         # poll user duplicates off
-        send_mock.reset_mock()
+        send_update_mock.reset_mock()
+        self.db_mock.update_user.reset_mock()
         options_dict = {
             msbot.constants.DUPLICATES: False
         }
         alice = User(('Alice', 0, 0, json.dumps(options_dict)))
         self.db_mock.get_latest_spoiler_id.return_value = 2
         webhook.update_user(alice)
-        send_mock.assert_called_once_with(
+        send_update_mock.assert_called_once_with(
             alice.user_id,
             msbot.constants.RESP_UPDATE.format(num_spoilers=1)
         )
+        self.db_mock.update_user.assert_called_once_with(
+            alice.user_id,
+            last_updated=2
+        )
 
         # poll user duplicates off spoilers all duplicates
+        send_update_mock.reset_mock()
+        self.db_mock.update_user.reset_mock()
         self.db_mock.get_spoilers_later_than.return_value = [
-            Spoiler(('one1.jpg','attach1','2019-01-01',None)),
-            Spoiler(('one2.jpg','attach2','2019-01-01',None)),
+            spoil2,
+            spoil3
         ]
-        send_mock.reset_mock()
         options_dict = {
             msbot.constants.DUPLICATES: False
         }
         alice = User(('Alice', 0, 0, json.dumps(options_dict)))
         self.db_mock.get_latest_spoiler_id.return_value = 2
         webhook.update_user(alice)
-        send_mock.assert_not_called()
+        send_update_mock.assert_not_called()
+        self.db_mock.update_user.assert_called_once_with(
+            alice.user_id,
+            last_updated=2
+        )
 
         # asap user duplicates on
+        self.db_mock.update_user.reset_mock()
+        self.db_mock.get_spoilers_later_than.return_value = [
+            spoil1,
+            spoil2,
+        ]
+        options_dict = {
+            msbot.constants.DUPLICATES: True
+        }
+        alice = User(('Alice', 0, 0, json.dumps(options_dict)))
         alice.options.update_mode = msbot.constants.ASAP_MODE_CMD
         webhook.update_user(alice)
-        handle_mock.assert_called_once_with(
+        calls = [
+            mock.call(alice, spoil1),
+            mock.call(alice, spoil2),
+        ]
+        send_spoiler_mock.assert_has_calls(calls, any_order=True)
+        self.assertEqual(send_spoiler_mock.call_count, len(calls))
+        self.db_mock.update_user.assert_called_once_with(
             alice.user_id,
-            msbot.constants.SEND_CMD
+            last_spoiled=2,
+            last_updated=2
+        )
+
+        # asap user duplicates off
+        self.db_mock.update_user.reset_mock()
+        send_spoiler_mock.reset_mock()
+        self.db_mock.get_spoilers_later_than.return_value = [
+            spoil1,
+            spoil2,
+        ]
+        options_dict = {
+            msbot.constants.DUPLICATES: False
+        }
+        alice = User(('Alice', 0, 0, json.dumps(options_dict)))
+        alice.options.update_mode = msbot.constants.ASAP_MODE_CMD
+        webhook.update_user(alice)
+        calls = [
+            mock.call(alice, spoil1),
+        ]
+        send_spoiler_mock.assert_has_calls(calls, any_order=True)
+        self.assertEqual(send_spoiler_mock.call_count, len(calls))
+        self.db_mock.update_user.assert_called_once_with(
+            alice.user_id,
+            last_spoiled=2,
+            last_updated=2
+        )
+
+        # asap user duplicates off spoilers all duplicates
+        self.db_mock.update_user.reset_mock()
+        send_spoiler_mock.reset_mock()
+        self.db_mock.get_spoilers_later_than.return_value = [
+            spoil2,
+            spoil3,
+        ]
+        options_dict = {
+            msbot.constants.DUPLICATES: False
+        }
+        alice = User(('Alice', 0, 0, json.dumps(options_dict)))
+        alice.options.update_mode = msbot.constants.ASAP_MODE_CMD
+        webhook.update_user(alice)
+        send_spoiler_mock.assert_not_called()
+        self.db_mock.update_user.assert_called_once_with(
+            alice.user_id,
+            last_spoiled=2,
+            last_updated=2
         )
 
         # unsupported mode
-        send_mock.reset_mock()
+        self.db_mock.update_user.reset_mock()
+        send_update_mock.reset_mock()
         alice = User(('Alice', 0, 0, '{}'))
         self.db_mock.get_latest_spoiler_id.return_value = 2
         alice.options.update_mode = 'UNSUPPORTED'
         webhook.update_user(alice)
-        send_mock.assert_called_once_with(
+        send_update_mock.assert_called_once_with(
             alice.user_id,
             msbot.constants.RESP_UPDATE.format(num_spoilers=2)
+        )
+        self.db_mock.update_user.assert_called_once_with(
+            alice.user_id,
+            last_updated=2
         )
 
 
