@@ -234,20 +234,54 @@ class TestWebhook(unittest.TestCase):
     @mock.patch('webhook.send_update')
     def test_update_user(self, send_mock, handle_mock):
 
-        # default user
+        self.db_mock.get_spoilers_later_than.return_value = [
+            Spoiler(('one.jpg','attach1','2019-01-01',None)),
+            Spoiler(('one1.jpg','attach2','2019-01-01',None)),
+        ]
+
+        # poll user duplicates on
         alice = User(('Alice', 0, 0, '{}'))
         self.db_mock.get_latest_spoiler_id.return_value = 2
         webhook.update_user(alice)
-        send_mock.assert_called_once_with(alice.user_id,
-                                          msbot.constants.RESP_UPDATE
-                                          .format(num_spoilers=2)
-                                          )
+        send_mock.assert_called_once_with(
+            alice.user_id,
+            msbot.constants.RESP_UPDATE.format(num_spoilers=2)
+        )
 
-        # asap user
+        # poll user duplicates off
+        send_mock.reset_mock()
+        options_dict = {
+            msbot.constants.DUPLICATES: False
+        }
+        alice = User(('Alice', 0, 0, json.dumps(options_dict)))
+        self.db_mock.get_latest_spoiler_id.return_value = 2
+        webhook.update_user(alice)
+        send_mock.assert_called_once_with(
+            alice.user_id,
+            msbot.constants.RESP_UPDATE.format(num_spoilers=1)
+        )
+
+        # poll user duplicates off spoilers all duplicates
+        self.db_mock.get_spoilers_later_than.return_value = [
+            Spoiler(('one1.jpg','attach1','2019-01-01',None)),
+            Spoiler(('one2.jpg','attach2','2019-01-01',None)),
+        ]
+        send_mock.reset_mock()
+        options_dict = {
+            msbot.constants.DUPLICATES: False
+        }
+        alice = User(('Alice', 0, 0, json.dumps(options_dict)))
+        self.db_mock.get_latest_spoiler_id.return_value = 2
+        webhook.update_user(alice)
+        send_mock.assert_not_called()
+
+        # asap user duplicates on
         alice.options.update_mode = msbot.constants.ASAP_MODE_CMD
         webhook.update_user(alice)
-        handle_mock.assert_called_once_with(alice.user_id,
-                                            msbot.constants.SEND_CMD)
+        handle_mock.assert_called_once_with(
+            alice.user_id,
+            msbot.constants.SEND_CMD
+        )
 
         # unsupported mode
         send_mock.reset_mock()
@@ -255,14 +289,14 @@ class TestWebhook(unittest.TestCase):
         self.db_mock.get_latest_spoiler_id.return_value = 2
         alice.options.update_mode = 'UNSUPPORTED'
         webhook.update_user(alice)
-        send_mock.assert_called_once_with(alice.user_id,
-                                          msbot.constants.RESP_UPDATE
-                                          .format(num_spoilers=2)
-                                          )
+        send_mock.assert_called_once_with(
+            alice.user_id,
+            msbot.constants.RESP_UPDATE.format(num_spoilers=2)
+        )
 
 
-    @mock.patch('webhook.send_update')
-    def test_update_users(self, send_mock):
+    @mock.patch('webhook.update_user')
+    def test_update_users(self, update_mock):
 
         alice = User(('Alice', 0, 0, '{}'))
         bob = User(('Bob', 4, 1, '{}'))
@@ -282,16 +316,14 @@ class TestWebhook(unittest.TestCase):
         self.db_mock.get_latest_spoiler_id.return_value = 5
 
         calls = [
-            mock.call(alice.user_id,
-                      msbot.constants.RESP_UPDATE.format(num_spoilers=5)),
-            mock.call(bob.user_id,
-                      msbot.constants.RESP_UPDATE.format(num_spoilers=4)),
+            mock.call(alice),
+            mock.call(bob)
         ]
 
         webhook.update_users()
 
-        send_mock.assert_has_calls(calls, any_order=True)
-        self.assertEqual(send_mock.call_count, len(calls))
+        update_mock.assert_has_calls(calls, any_order=True)
+        self.assertEqual(update_mock.call_count, len(calls))
 
     @mock.patch('webhook.send_message')
     def test_handle_message_sub_when_unsubbed(self, send_mock):

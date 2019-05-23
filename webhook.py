@@ -114,9 +114,11 @@ def update_user(user):
     last_spoiler = db.get_latest_spoiler_id()
 
     def poll(user):
-        num_spoilers = last_spoiler - user.last_spoiled
-        resp = msbot.constants.RESP_UPDATE.format(num_spoilers=num_spoilers)
-        send_update(user.user_id, resp)
+        spoilers = db.get_spoilers_later_than(user.last_spoiled)
+        spoilers = filter_spoilers_by_user(spoilers, user)
+        if spoilers:
+            resp = msbot.constants.RESP_UPDATE.format(num_spoilers=len(spoilers))
+            send_update(user.user_id, resp)
 
     def asap(user):
         handle_message(user.user_id, msbot.constants.SEND_CMD)
