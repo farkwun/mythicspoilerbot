@@ -257,6 +257,26 @@ def handle_message(sender_psid, received_message):
             )
         return RESP_INVALID_CMD
 
+    def toggle_duplicates(sender_psid):
+        if database.user_exists(sender_psid):
+            user = database.get_user_from_id(sender_psid)
+            database.update_user(
+                sender_psid,
+                options={
+                    msbot.constants.DUPLICATES: not user.options.duplicates
+                }
+            )
+            return to_text_response(
+                msbot.constants.RESP_DUPLICATE_TOGGLE_COMPLETE.format(
+                    duplicate_status=(
+                        msbot.constants.ON
+                        if not user.options.duplicates
+                        else msbot.constants.OFF
+                    )
+                )
+            )
+        return RESP_INVALID_CMD
+
     def info(sender_psid):
         if database.user_exists(sender_psid):
             return text_quick_reply_response(
@@ -279,6 +299,7 @@ def handle_message(sender_psid, received_message):
             id,
             msbot.constants.ASAP_MODE_CMD
         ),
+        msbot.constants.DUPLICATES_CMD: lambda id: toggle_duplicates(id),
         msbot.constants.INFO_CMD: lambda id: info(id),
     }
 

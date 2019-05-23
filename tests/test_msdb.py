@@ -128,6 +128,29 @@ class TestMSDatabase(unittest.TestCase):
         user.options.update_mode = msbot.constants.ASAP_MODE_CMD
         self.assertEqual(self.test_db.get_user_from_id('Erin'), user)
 
+        # options - duplicates, no previous duplicates
+        user = User(('Frank', 0, 0, '{}'))
+        self.insert_user(user)
+        mock_options = {
+            msbot.constants.DUPLICATES: False
+        }
+        self.test_db.update_user('Frank', options=mock_options)
+        user.options.duplicates = False
+        self.assertEqual(self.test_db.get_user_from_id('Frank'), user)
+
+        # options - duplicates, existing duplicates
+        mock_options = {
+            msbot.constants.DUPLICATES: False
+        }
+        user = User(('Grace', 0, 0, json.dumps(mock_options)))
+        self.insert_user(user)
+        mock_options = {
+            msbot.constants.DUPLICATES: True
+        }
+        self.test_db.update_user('Grace', options=mock_options)
+        user.options.duplicates = True
+        self.assertEqual(self.test_db.get_user_from_id('Grace'), user)
+
     def test_spoiler_exists(self):
         test_spoiler = Spoiler(('test_spoiler_img', 0, None, 0))
         self.assertFalse(self.test_db.spoiler_exists(test_spoiler))
