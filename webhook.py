@@ -165,6 +165,7 @@ INFO_BUTTON = create_quick_reply_button(msbot.constants.INFO_CMD)
 HELLO_BUTTON = create_quick_reply_button(msbot.constants.HELLO_CMD)
 RECENT_BUTTON = create_quick_reply_button(msbot.constants.RECENT_CMD)
 MODE_BUTTON = create_quick_reply_button(msbot.constants.MODE_CMD)
+OPTIONS_BUTTON = create_quick_reply_button(msbot.constants.OPTIONS_CMD)
 UPDATE_MODE_BUTTONS = [
     create_quick_reply_button(msbot.constants.POLL_MODE_CMD),
     create_quick_reply_button(msbot.constants.ASAP_MODE_CMD),
@@ -172,7 +173,7 @@ UPDATE_MODE_BUTTONS = [
 INFO_PROMPT_BUTTONS = [
     create_quick_reply_button(msbot.constants.SEND_CMD),
     RECENT_BUTTON,
-    MODE_BUTTON,
+    OPTIONS_BUTTON,
     create_quick_reply_button(msbot.constants.GOODBYE_CMD),
 ]
 OPTIONS_PROMPT_BUTTONS = [
@@ -290,7 +291,8 @@ def handle_message(sender_psid, received_message):
                     duplicate_status = (
                         msbot.constants.ON if user.options.duplicates
                         else msbot.constants.OFF
-                    )
+                    ),
+                    update_mode = user.options.update_mode
                 ),
                 OPTIONS_PROMPT_BUTTONS
             )
