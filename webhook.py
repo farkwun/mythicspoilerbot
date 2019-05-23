@@ -44,6 +44,17 @@ def text_quick_reply_response(text, buttons):
         msbot.constants.QUICK_REPLIES: buttons
     }
 
+def is_spoiler_allowed_by_options(spoiler, options):
+    return (
+        (
+            options.duplicates or
+            (not options.duplicates and not any(c.isdigit() for c in spoiler.image_url))
+        )
+    )
+
+def filter_spoilers_by_user(spoilers, user):
+    return [ s for s in spoilers if is_spoiler_allowed_by_options(s, user.options) ]
+
 # TODO: Refactor this to take in a user object and a last spoiled id
 # Also write a test for it
 UPDATE_BUTTONS = [

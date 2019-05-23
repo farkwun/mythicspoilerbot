@@ -10,6 +10,7 @@ import webhook
 import msbot.constants
 from msbot.spoiler import Spoiler
 from msbot.user import User
+from msbot.user_options import UserOptions
 
 TEST_ACCESS_TOKEN = 'TEST_ACCESS_TOKEN'
 TEST_VERIFY_TOKEN = 'TEST_VERIFY_TOKEN'
@@ -97,6 +98,78 @@ class TestWebhook(unittest.TestCase):
                 msbot.constants.QUICK_REPLIES: buttons,
             }
         )
+
+    def test_is_spoiler_allowed_by_options_duplicates_on(self):
+        options_dict = {
+            msbot.constants.DUPLICATES: True
+        }
+        options = UserOptions(json.dumps(options_dict))
+
+        # normal image url
+        test_spoiler = Spoiler(('image.jpg', 123456, '2019-01-01', None))
+        self.assertTrue(webhook.is_spoiler_allowed_by_options(test_spoiler, options))
+
+        # duplicate image url
+        test_spoiler = Spoiler(('image1.jpg', 123456, '2019-01-01', None))
+        self.assertTrue(webhook.is_spoiler_allowed_by_options(test_spoiler, options))
+
+    def test_is_spoiler_allowed_by_options_duplicates_off(self):
+        options_dict = {
+            msbot.constants.DUPLICATES: False
+        }
+        options = UserOptions(json.dumps(options_dict))
+
+        # normal image url
+        test_spoiler = Spoiler(('image.jpg', 123456, '2019-01-01', None))
+        self.assertTrue(webhook.is_spoiler_allowed_by_options(test_spoiler, options))
+
+        # duplicate image url
+        test_spoiler = Spoiler(('image1.jpg', 123456, '2019-01-01', None))
+        self.assertFalse(webhook.is_spoiler_allowed_by_options(test_spoiler, options))
+
+    def test_filter_spoilers_by_user_duplicates_on(self):
+        options_dict = {
+            msbot.constants.DUPLICATES: True
+        }
+        options_json = json.dumps(options_dict)
+        test_user = User((1234, 0, 0, options_json))
+
+        spoilers = [
+            Spoiler(('test.jpg', 1, '2019-01-01', None)),
+            Spoiler(('test1.jpg', 2, '2019-01-01', None)),
+            Spoiler(('test2.jpg', 3, '2019-01-01', None)),
+            Spoiler(('other.jpg', 4, '2019-01-01', None)),
+        ]
+
+        self.assertCountEqual(
+            spoilers,
+            webhook.filter_spoilers_by_user(spoilers, test_user)
+        )
+
+    def test_filter_spoilers_by_user_duplicates_off(self):
+        options_dict = {
+            msbot.constants.DUPLICATES: False
+        }
+        options_json = json.dumps(options_dict)
+        test_user = User((1234, 0, 0, options_json))
+
+        spoilers = [
+            Spoiler(('test.jpg', 1, '2019-01-01', None)),
+            Spoiler(('test1.jpg', 2, '2019-01-01', None)),
+            Spoiler(('test2.jpg', 3, '2019-01-01', None)),
+            Spoiler(('other.jpg', 4, '2019-01-01', None)),
+        ]
+
+        filtered_spoilers = [
+            Spoiler(('test.jpg', 1, '2019-01-01', None)),
+            Spoiler(('other.jpg', 4, '2019-01-01', None)),
+        ]
+
+        self.assertCountEqual(
+            filtered_spoilers,
+            webhook.filter_spoilers_by_user(spoilers, test_user)
+        )
+
 
     def test_get_attach_id_for(self):
         test_url = 'www.fake.com'
