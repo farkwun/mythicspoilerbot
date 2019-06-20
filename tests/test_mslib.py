@@ -48,3 +48,28 @@ class TestMSLib(unittest.TestCase):
                 'http://mythicspoilerapi.dungeonmastering.net/card_images/new_spoils/b.jpg',
             ]
         )
+
+    @mock.patch('msbot.mslib.requests.get')
+    def test_getLatestSpoilers_ignores_bad_values(self, get_mock):
+        mock_spoilers = {
+            'item': [
+                {
+                    'cardUrl': 'poopybutt'
+                },
+                {
+                    'cardUrl': 'b.jpg'
+                }
+            ]
+        }
+        get_mock.return_value = mock.Mock(
+            text='(' + json.dumps(mock_spoilers) + ')'
+        )
+
+        latest_spoils = mslib.getLatestSpoilers()
+
+        self.assertEqual(
+            latest_spoils,
+            [
+                'http://mythicspoilerapi.dungeonmastering.net/card_images/new_spoils/b.jpg',
+            ]
+        )
