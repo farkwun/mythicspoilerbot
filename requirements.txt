@@ -40,7 +40,7 @@ six==1.11.0
 team==1.0
 termcolor==1.1.0
 typing==3.6.4
-urllib3==1.22
+urllib3==1.26.5
 virtualenv==15.1.0
 Werkzeug==0.14.1
 wrapt==1.10.11
